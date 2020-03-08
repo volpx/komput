@@ -1,0 +1,14 @@
+#!/bin/bash
+
+echo "Henlo!"
+
+case "$1" in
+
+    GL-LL)  echo "GL-LL"
+        make GL-LL
+        ./GL-LL
+        gnuplot GL-LL.plot -persistent
+    ;;
+    *) echo "Signal number $1 is not processed"
+    ;;
+esac
