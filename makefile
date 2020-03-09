@@ -1,5 +1,5 @@
 
-.PHONY: clean help
+.PHONY: clean help clean-all
 # $@ is the recipe name
 # $< is the first dependence
 # $^ are all the dependencies
@@ -48,9 +48,9 @@ OBJS        = \
 
 # OBJS       += $(MAIN_OBJS)
 
-TARGETS     = \
-	$(patsubst %.cpp,%,$(notdir $(MAINS))) \
-	$(patsubst %.c,%,$(notdir $(MAINS)))
+# TARGETS     = \
+# 	$(patsubst %.cpp,%,$(notdir $(MAINS))) \
+# 	$(patsubst %.c,%,$(notdir $(MAINS)))
 
 # Attempt to create the output directories
 ifneq ($(BUILD_DIR),)
@@ -62,7 +62,10 @@ help:
 	@echo ciao
 
 clean:
-	$(RM) $(OBJ_DIR)/*.o $(BUILD_DIR)/$(TARGETS)
+	$(RM) $(OBJ_DIR)/*.o
+
+clean-all:
+	$(RM) -r $(BUILD_DIR)
 
 debug:
 	@echo $(OBJS)
