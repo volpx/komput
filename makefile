@@ -23,6 +23,8 @@ ASM_FLAGS   = -I$(INC_DIR)
 LIBS        =  -lboost_iostreams -lboost_system -lboost_filesystem
 L_FLAGS     = $(LIBS)
 
+# CPP_FLAGS += -DDEBUG
+
 # Header files
 # _DEPS       =
 # DEPS        = $(patsubst %,$(INC_DIR)/%,$(_DEPS))
@@ -96,5 +98,7 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.asm
 sim1: $(OBJS) $(OBJ_DIR)/sim1.o
 	$(CPP) -o $@ $^ $(CPP_FLAGS) $(L_FLAGS)
 GL-LL: $(OBJS) $(OBJ_DIR)/GL-LL.o
+	$(CPP) -o $@ $^ $(CPP_FLAGS) $(L_FLAGS)
+ese1: $(OBJS) $(OBJ_DIR)/ese1.o
 	$(CPP) -o $@ $^ $(CPP_FLAGS) $(L_FLAGS)
 
