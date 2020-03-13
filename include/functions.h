@@ -5,6 +5,7 @@
 #include <vector>
 #include <fstream>
 #include <functional>
+#include <cmath>
 
 /* Plain implementation of the predictor corrector integrator
  * 
@@ -17,7 +18,18 @@ double predictor_corrector(std::function<double(double,double)> F,double y,doubl
  * epsilon precision i want for the found zero
  * h is the mesh size for the derivation
  */
-double findzero_newton_raphson(std::function<double(double)> F,double x0,double epsilon,double h);
+double findzero_newton_raphson_xeps(std::function<double(double)> F,double x0,double epsilon,double h,
+                                    const double xmin=-INFINITY,const double xmax=INFINITY);
+double findzero_newton_raphson_yeps(std::function<double(double)> F,double x0,double epsilon,double h);
+
+/* Find zero with bisection
+ * F function for the zero
+ * xmin and xmax are the boundary
+ * epsilon is the accuracy of the zero
+ * NOTE: must change sign between xmin and xmax otherwise returns the middle
+ */
+double findzero_bisection_xeps(std::function<double(double)> F,double xmin,double xmax,const double epsilon);
+double findzero_bisection_yeps(std::function<double(double)> F,double xmin,double xmax,const double epsilon);
 
 /* Derivator with 5 points rule
  * of function F

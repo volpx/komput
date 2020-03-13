@@ -11,7 +11,33 @@ double predictor_corrector(std::function<double(double,double)> F,double y,doubl
 	return y + h*0.5*(k1+k2);
 }
 
-double findzero_newton_raphson(std::function<double(double)> F,const double x0,const double epsilon,const double h){
+double findzero_newton_raphson_xeps(std::function<double(double)> F,const double x0,const double epsilon,const double h,
+									const double xmin,const double xmax){
+	double x{x0},corr{F(x)/derive_5points(F,x,h)};
+
+	while( std::abs(corr) > epsilon ){
+
+		#ifdef DEBUG
+		std::cout<<"cond= "<< (std::abs(F(x)) - epsilon) <<std::endl;
+		#endif
+
+		#ifdef DEBUG
+		std::cout<<"NR:x= "<<x<<std::endl;
+		#endif 
+
+		#ifdef DEBUG
+		std::cout<<"NR:corr= "<<F(x)/derive_5points(F,x,h)<<std::endl;
+		#endif
+
+		corr=F(x)/derive_5points(F,x,h);
+		x=x-corr;
+		x=(x>=xmax)?xmax:x;
+		x=(x<=xmin)?xmin:x;
+	}
+	return x;
+}
+
+double findzero_newton_raphson_yeps(std::function<double(double)> F,const double x0,const double epsilon,const double h){
 	double x{x0};
 
 	while( std::abs(F(x)) > epsilon ){
@@ -34,7 +60,43 @@ double findzero_newton_raphson(std::function<double(double)> F,const double x0,c
 	return x;
 }
 
-double findzero_bisection(){}
+double findzero_bisection_yeps(std::function<double(double)> F,double xmin,double xmax,const double epsilon){
+	// must change sign between min and max
+	double xmiddle{(xmax+xmin)/2};
+	if(F(xmin)*F(xmax) > 0)
+		return xmiddle;
+
+	while( std::abs(F(xmiddle)) > epsilon ){
+		if (F(xmin)*F(xmiddle) < 0){
+			// zero here
+			xmax=xmiddle;
+		}
+		else{
+			xmin=xmiddle;
+		}
+		xmiddle=(xmax+xmin)/2;
+	}
+	return 0;
+}
+
+double findzero_bisection_xeps(std::function<double(double)> F,double xmin,double xmax,const double epsilon){
+	// must change sign between min and max
+	double xmiddle{(xmax+xmin)/2};
+	if(F(xmin)*F(xmax) > 0)
+		return xmiddle;
+
+	while( std::abs(xmax-xmin) > epsilon ){
+		if (F(xmin)*F(xmiddle) < 0){
+			// zero here
+			xmax=xmiddle;
+		}
+		else{
+			xmin=xmiddle;
+		}
+		xmiddle=(xmax+xmin)/2;
+	}
+	return 0;
+}
 
 double derive_5points(std::function<double(double)> F,const double x0,const double h){
 	// 5 points derivative

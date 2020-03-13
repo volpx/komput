@@ -39,29 +39,24 @@ double F(double E_tilde,double gamma, uint8_t n){
 		integrator_simpson_cubic([&] (double x) -> double { return std::sqrt(std::abs(E_tilde-V(x))) ; }, xin, xout, M)
 	};
 
-	return gamma*I-2*M_PI*(n+0.5);
+	return gamma*I-M_PI*(n+0.5);
 }
 
 
 int main(){
 	// #ifdef DEBUG
-	// std::function<double(double)> Q{
-	// 	[&] (double x)->double { return x; }
-	// };
-	// std::function<double(double)> A{
-	// 	[&] (double x)->double { return Q(x); }
-	// };
-	// std::cout<<A(4)<<std::endl;
+	
 	// #else
 
-	double gamma{150};
-	double autov_E_tilde;
+	double gamma{21.7};
 
 	std::cout<<"Gamma= "<<gamma<<std::endl;
 	
 	double E_tilde_0{-0.5};
-	double epsilon{1e-6};
-	double h_diff{1e-8};
+	double epsilon{1e-10};
+	double h_diff{1e-10};
+	// double hw{1};
+	double autov_E_tilde{E_tilde_0};
 
 	std::cout<<"E_tilde_0= "<<E_tilde_0<<std::endl;
 	std::cout<<"epsilon= "<<epsilon<<std::endl;
@@ -72,9 +67,9 @@ int main(){
 		std::function<double(double)> G{
 			[&] (double E_tilde)->double { return F(E_tilde,gamma,n); }
 		};
-		autov_E_tilde=findzero_newton_raphson(G,E_tilde_0,epsilon,h_diff);
+		autov_E_tilde=findzero_newton_raphson_xeps(G,autov_E_tilde,epsilon,h_diff,-INFINITY,0-epsilon);
 		std::cout<<"Autovalore n="<<n<<", E_tilde="<<autov_E_tilde<<std::endl;
-		
+		// autov_
 	}
 	return 0;
 	// #endif
@@ -92,10 +87,10 @@ double S_d(double E){
 
 	double rmin { std::pow(2,1.0/6)*sigma };
 	double rin { 
-		findzero_newton_raphson([&] (double r) { return V(r)-E; } , rmin-0.0001, 0.0001, 0.0001) 
+		findzero_newton_raphson_xeps([&] (double r) { return V(r)-E; } , rmin-0.0001, 0.0001, 0.0001) 
 	};
 	double rout { 
-		findzero_newton_raphson([&] (double r) { return V(r)-E; } , rmin+0.0001, 0.0001, 0.0001) 
+		findzero_newton_raphson_xeps([&] (double r) { return V(r)-E; } , rmin+0.0001, 0.0001, 0.0001) 
 	};
 
 	return integrator_simpson_cubic( [&] (double r) { return std::abs(std::sqrt(2*m*(E-V(r)))); } ,
