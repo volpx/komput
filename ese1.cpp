@@ -45,16 +45,29 @@ double F(double E_tilde,double gamma, uint8_t n){
 
 int main(){
 	// #ifdef DEBUG
-	// 	std::cout<<integrator_simpson_cubic([&] (double x) -> double { return x*x; }, 0, 4, 100)<<std::endl;
+	// std::function<double(double)> Q{
+	// 	[&] (double x)->double { return x; }
+	// };
+	// std::function<double(double)> A{
+	// 	[&] (double x)->double { return Q(x); }
+	// };
+	// std::cout<<A(4)<<std::endl;
 	// #else
 
-	double gamma{21.7};
+	double gamma{150};
 	double autov_E_tilde;
 
-	for (int n{0};n<=3;++n){
-		double E_tilde_0{-0.5};
-		double epsilon{1e-6};
-		double h_diff{1e-8};
+	std::cout<<"Gamma= "<<gamma<<std::endl;
+	
+	double E_tilde_0{-0.5};
+	double epsilon{1e-6};
+	double h_diff{1e-8};
+
+	std::cout<<"E_tilde_0= "<<E_tilde_0<<std::endl;
+	std::cout<<"epsilon= "<<epsilon<<std::endl;
+	std::cout<<"h_diff= "<<h_diff<<std::endl;
+
+	for (int n{0};n<=100;++n){
 
 		std::function<double(double)> G{
 			[&] (double E_tilde)->double { return F(E_tilde,gamma,n); }

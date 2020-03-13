@@ -23,7 +23,7 @@ ASM_FLAGS   = -I$(INC_DIR)
 LIBS        =  # -lboost_iostreams -lboost_system -lboost_filesystem
 L_FLAGS     = $(LIBS)
 
-CPP_FLAGS += -DDEBUG
+# CPP_FLAGS += -DDEBUG
 
 # Header files
 # _DEPS       =
