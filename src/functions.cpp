@@ -17,11 +17,11 @@ double findzero_newton_raphson(std::function<double(double)> F,const double x0,c
 	while( std::abs(F(x)) > epsilon ){
 
 		#ifdef DEBUG
-		std::cout<<"NR:x= "<<x<<std::endl;
+		std::cout<<"cond= "<< (std::abs(F(x)) - epsilon) <<std::endl;
 		#endif
 
 		#ifdef DEBUG
-		std::cout<<"NR:F= "<<F(x)<<std::endl;
+		std::cout<<"NR:x= "<<x<<std::endl;
 		#endif 
 
 		#ifdef DEBUG

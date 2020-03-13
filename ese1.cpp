@@ -27,11 +27,12 @@ double F(double E_tilde,double gamma, uint8_t n){
 	// double xout { 
 	// 	findzero_newton_raphson([&] (double x) -> double { return V(x)-E_tilde; } , xmin+d, eps, h) 
 	// };
-	double xin{ std::pow( -2/E_tilde + 2*std::sqrt( (1/E_tilde+1)/E_tilde) ,1.0/6) };
-	double xout{ std::pow( -2/E_tilde - 2*std::sqrt( (1/E_tilde+1)/E_tilde) ,1.0/6) };
+	double xin{ std::pow( -2/E_tilde - 2*std::sqrt( (1/E_tilde+1)/E_tilde) ,1.0/6) };
+	double xout{ std::pow( -2/E_tilde + 2*std::sqrt( (1/E_tilde+1)/E_tilde) ,1.0/6) };
 	
 	#ifdef DEBUG
-	std::cout<<xmin<<" "<<xin<<" "<<xout<<std::endl;
+	if (xin<0 || xout<0)
+		std::cout<<" "<<xin<<" "<<xout<<std::endl;
 	#endif
 
 	double I{
@@ -44,18 +45,18 @@ double F(double E_tilde,double gamma, uint8_t n){
 
 int main(){
 	// #ifdef DEBUG
-	// 	std::cout<<std::pow(1/1.122,12)<<std::endl;
+	// 	std::cout<<integrator_simpson_cubic([&] (double x) -> double { return x*x; }, 0, 4, 100)<<std::endl;
 	// #else
 
 	double gamma{21.7};
 	double autov_E_tilde;
 
-	for (int n{1};n<=4;++n){
+	for (int n{0};n<=3;++n){
 		double E_tilde_0{-0.5};
 		double epsilon{1e-6};
 		double h_diff{1e-8};
 
-		auto G{
+		std::function<double(double)> G{
 			[&] (double E_tilde)->double { return F(E_tilde,gamma,n); }
 		};
 		autov_E_tilde=findzero_newton_raphson(G,E_tilde_0,epsilon,h_diff);
