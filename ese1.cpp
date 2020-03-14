@@ -17,7 +17,7 @@ double F(double E_tilde,double gamma, uint8_t n){
 	// const double d{1e-3};
 	// const double eps{1e-6};
 	// const double h{1e-8};
-	const uint32_t M{(uint32_t)1e5};
+	const uint32_t M{(uint32_t)1e6};
 
 	//double xmin { std::pow(2,1.0/6) };
 	// la funzione era invertibile
@@ -48,26 +48,35 @@ int main(){
 	
 	// #else
 
-	double gamma{21.7};
+	double gamma{150};
 
 	std::cout<<"Gamma= "<<gamma<<std::endl;
 	
-	double E_tilde_0{-0.5};
+	double E_tilde_0{-1};
 	double epsilon{1e-10};
 	double h_diff{1e-10};
 	// double hw{1};
-	double autov_E_tilde{E_tilde_0};
+	double autov_E_tilde{E_tilde_0+epsilon};
 
 	std::cout<<"E_tilde_0= "<<E_tilde_0<<std::endl;
 	std::cout<<"epsilon= "<<epsilon<<std::endl;
 	std::cout<<"h_diff= "<<h_diff<<std::endl;
+
+
+	// double E;
+	// for (int i{0};i<101;++i){
+	// 	E=-1+1.0/100*i;
+	// 	std::cout<<"E= "<<E<<",F(E)= "<<F(E,150,25)<<std::endl;
+	// }
 
 	for (int n{0};n<=100;++n){
 
 		std::function<double(double)> G{
 			[&] (double E_tilde)->double { return F(E_tilde,gamma,n); }
 		};
-		autov_E_tilde=findzero_newton_raphson_xeps(G,autov_E_tilde,epsilon,h_diff,-INFINITY,0-epsilon);
+		// autov_E_tilde=findzero_newton_raphson_xeps(G,autov_E_tilde,epsilon,h_diff,-INFINITY,0-epsilon);
+		// autov_E_tilde=findzero_secants_xeps(G,autov_E_tilde,autov_E_tilde-epsilon,epsilon);
+		autov_E_tilde=findzero_bisection_xeps(G,autov_E_tilde,0-epsilon,epsilon);
 		std::cout<<"Autovalore n="<<n<<", E_tilde="<<autov_E_tilde<<std::endl;
 		// autov_
 	}

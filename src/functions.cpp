@@ -76,7 +76,7 @@ double findzero_bisection_yeps(std::function<double(double)> F,double xmin,doubl
 		}
 		xmiddle=(xmax+xmin)/2;
 	}
-	return 0;
+	return xmiddle;
 }
 
 double findzero_bisection_xeps(std::function<double(double)> F,double xmin,double xmax,const double epsilon){
@@ -95,7 +95,18 @@ double findzero_bisection_xeps(std::function<double(double)> F,double xmin,doubl
 		}
 		xmiddle=(xmax+xmin)/2;
 	}
-	return 0;
+	return xmiddle;
+}
+
+double findzero_secants_xeps(std::function<double(double)> F, double x0,double x1,const double epsilon){
+	double x2{x1+epsilon*1.1};
+
+	while(std::abs(x2-x1) > epsilon){
+		x2=x1-F(x1)*(x1-x0)/(F(x1)-F(x0));
+		x0=x1;
+		x1=x2;
+	}
+	return (x2+x1)/2;
 }
 
 double derive_5points(std::function<double(double)> F,const double x0,const double h){

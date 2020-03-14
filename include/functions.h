@@ -31,6 +31,13 @@ double findzero_newton_raphson_yeps(std::function<double(double)> F,double x0,do
 double findzero_bisection_xeps(std::function<double(double)> F,double xmin,double xmax,const double epsilon);
 double findzero_bisection_yeps(std::function<double(double)> F,double xmin,double xmax,const double epsilon);
 
+/* Find zero with secants method
+ * F functoin for the zero
+ * x0 is the starting point
+ * epsilon is the precision
+ */
+double findzero_secants_xeps(std::function<double(double)> F, double x0,double x1,const double epsilon);
+
 /* Derivator with 5 points rule
  * of function F
  * around point x0
