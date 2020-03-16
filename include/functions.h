@@ -34,6 +34,7 @@ double findzero_bisection_yeps(std::function<double(double)> F,double xmin,doubl
 /* Find zero with secants method
  * F functoin for the zero
  * x0 is the starting point
+ * x1 is the other secant starting point
  * epsilon is the precision
  */
 double findzero_secants_xeps(std::function<double(double)> F, double x0,double x1,const double epsilon);

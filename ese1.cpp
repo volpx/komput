@@ -36,7 +36,8 @@ double F(double E_tilde,double gamma, uint8_t n){
 	#endif
 
 	double I{
-		integrator_simpson_cubic([&] (double x) -> double { return std::sqrt(std::abs(E_tilde-V(x))) ; }, xin, xout, M)
+		(E_tilde>=0) ? 0.8413092631952725567050114474301765:
+			integrator_simpson_cubic([&] (double x) -> double { return std::sqrt(std::abs(E_tilde-V(x))) ; }, xin, xout, M)
 	};
 
 	return gamma*I-M_PI*(n+0.5);
@@ -44,19 +45,24 @@ double F(double E_tilde,double gamma, uint8_t n){
 
 
 int main(){
-	// #ifdef DEBUG
 	
-	// #else
+	// for (int i=0;i<=100;++i){
+	// 	std::cout<<F(-1+i/100.0,21.7,1)<<std::endl;
+	// }
+	// return 0;
 
-	double gamma{150};
+	double gamma{21.7};
+
+	std::vector<double> aut(100);
 
 	std::cout<<"Gamma= "<<gamma<<std::endl;
 	
-	double E_tilde_0{-1};
+	double E_tilde_0{-0.5};
 	double epsilon{1e-10};
 	double h_diff{1e-10};
 	// double hw{1};
-	double autov_E_tilde{E_tilde_0+epsilon};
+	double autov_E_tilde{E_tilde_0};
+	double autov_E_tilde_harmonic{};
 
 	std::cout<<"E_tilde_0= "<<E_tilde_0<<std::endl;
 	std::cout<<"epsilon= "<<epsilon<<std::endl;
@@ -69,19 +75,27 @@ int main(){
 	// 	std::cout<<"E= "<<E<<",F(E)= "<<F(E,150,25)<<std::endl;
 	// }
 
-	for (int n{0};n<=100;++n){
+	int n{0};
+	while(autov_E_tilde<0){
+	// for (int n{0};n<=100;++n){
 
 		std::function<double(double)> G{
 			[&] (double E_tilde)->double { return F(E_tilde,gamma,n); }
 		};
 		// autov_E_tilde=findzero_newton_raphson_xeps(G,autov_E_tilde,epsilon,h_diff,-INFINITY,0-epsilon);
-		// autov_E_tilde=findzero_secants_xeps(G,autov_E_tilde,autov_E_tilde-epsilon,epsilon);
-		autov_E_tilde=findzero_bisection_xeps(G,autov_E_tilde,0-epsilon,epsilon);
-		std::cout<<"Autovalore n="<<n<<", E_tilde="<<autov_E_tilde<<std::endl;
-		// autov_
+		autov_E_tilde=findzero_secants_xeps(G,autov_E_tilde,0,epsilon);
+		// autov_E_tilde=findzero_bisection_xeps(G,autov_E_tilde,0-epsilon,epsilon);
+
+		autov_E_tilde_harmonic=1/gamma*std::sqrt(24*13/std::pow(2,7.0/3)-12*7/std::pow(2,4.0/3))*(n+0.5)-1;
+		std::cout<<"Autovalore n="<<n<<", E_tilde="<<autov_E_tilde<<", E_tilde_h="<<autov_E_tilde_harmonic<<std::endl;
+
+		aut[n]=autov_E_tilde;
+		++n;
 	}
+
+
+	tocsv({{"autov",aut}},"output_data/autv12.7.csv");
 	return 0;
-	// #endif
 }
 
 double V_d(double r){

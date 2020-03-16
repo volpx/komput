@@ -1,8 +1,7 @@
 #include "functions.h"
 
-#ifdef DEBUG
 #include <iostream>
-#endif
+
 
 double predictor_corrector(std::function<double(double,double)> F,double y,double t,double h){
 	double k1{ F(t,y) };
@@ -99,15 +98,23 @@ double findzero_bisection_xeps(std::function<double(double)> F,double xmin,doubl
 }
 
 double findzero_secants_xeps(std::function<double(double)> F, double x0,double x1,const double epsilon){
-	double x2{x1+epsilon*1.1};
+	double x2{x1-F(x1)*(x1-x0)/(F(x1)-F(x0))}; 
 
 	while(std::abs(x2-x1) > epsilon){
-		x2=x1-F(x1)*(x1-x0)/(F(x1)-F(x0));
-		x0=x1;
+		x0=x1; 
 		x1=x2;
+		x2=x1-F(x1)*(x1-x0)/(F(x1)-F(x0)); 
 	}
 	return (x2+x1)/2;
 }
+/*
+x0=-.5
+x1=0
+x2=sensato
+x1=sensato
+x0=0
+
+*/
 
 double derive_5points(std::function<double(double)> F,const double x0,const double h){
 	// 5 points derivative
