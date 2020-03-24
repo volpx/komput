@@ -5,6 +5,7 @@
 #include <fstream>
 #include <vector>
 #include <cmath>
+#include <boost/format.hpp>
 
 
 double V(double x){
@@ -46,12 +47,13 @@ double F(double E_tilde,double gamma, uint8_t n){
 
 int main(){
 	
-	// for (int i=0;i<=100;++i){
-	// 	std::cout<<F(-1+i/100.0,21.7,1)<<std::endl;
-	// }
+	// double x{},corr{};
+	// std::cin>>x;
+	// std::cin>>corr;
+	// std::cout<<"Sig dig: "<<number_of_significant_digits(x,corr)<<std::endl;
 	// return 0;
 
-	double gamma{21.7};
+	const double gamma{21.7};
 
 	std::vector<double> aut(100);
 
@@ -83,18 +85,20 @@ int main(){
 			[&] (double E_tilde)->double { return F(E_tilde,gamma,n); }
 		};
 		// autov_E_tilde=findzero_newton_raphson_xeps(G,autov_E_tilde,epsilon,h_diff,-INFINITY,0-epsilon);
-		autov_E_tilde=findzero_secants_xeps(G,autov_E_tilde,0,epsilon);
+		// autov_E_tilde=findzero_secants_xeps(G,autov_E_tilde,0,epsilon);
+		autov_E_tilde=findzero_secants_xdigits(G,autov_E_tilde,0,5);
 		// autov_E_tilde=findzero_bisection_xeps(G,autov_E_tilde,0-epsilon,epsilon);
 
 		autov_E_tilde_harmonic=1/gamma*std::sqrt(24*13/std::pow(2,7.0/3)-12*7/std::pow(2,4.0/3))*(n+0.5)-1;
-		std::cout<<"Autovalore n="<<n<<", E_tilde="<<autov_E_tilde<<", E_tilde_h="<<autov_E_tilde_harmonic<<std::endl;
+
+		std::cout<<"Autovalore n="<<n<<boost::format(", E_tilde= %.5e, E_tilde_h= %.5e") % autov_E_tilde % autov_E_tilde_harmonic <<std::endl;
 
 		aut[n]=autov_E_tilde;
 		++n;
 	}
 
 
-	tocsv({{"autov",aut}},"output_data/autv12.7.csv");
+	// tocsv({{"autov",aut}},"output_data/autv12.7.csv");
 	return 0;
 }
 

@@ -7,6 +7,9 @@
 #include <functional>
 #include <cmath>
 
+
+int number_of_significant_digits(double x,double corr);
+
 /* Plain implementation of the predictor corrector integrator
  * 
  */
@@ -38,6 +41,7 @@ double findzero_bisection_yeps(std::function<double(double)> F,double xmin,doubl
  * epsilon is the precision
  */
 double findzero_secants_xeps(std::function<double(double)> F, double x0,double x1,const double epsilon);
+double findzero_secants_xdigits(std::function<double(double)> F, double x0,double x1,const int digits);
 
 /* Derivator with 5 points rule
  * of function F

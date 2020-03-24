@@ -2,6 +2,9 @@
 
 #include <iostream>
 
+int number_of_significant_digits(double x,double corr){
+	return (int) std::log10(x/corr);
+}
 
 double predictor_corrector(std::function<double(double,double)> F,double y,double t,double h){
 	double k1{ F(t,y) };
@@ -16,18 +19,6 @@ double findzero_newton_raphson_xeps(std::function<double(double)> F,const double
 
 	while( std::abs(corr) > epsilon ){
 
-		#ifdef DEBUG
-		std::cout<<"cond= "<< (std::abs(F(x)) - epsilon) <<std::endl;
-		#endif
-
-		#ifdef DEBUG
-		std::cout<<"NR:x= "<<x<<std::endl;
-		#endif 
-
-		#ifdef DEBUG
-		std::cout<<"NR:corr= "<<F(x)/derive_5points(F,x,h)<<std::endl;
-		#endif
-
 		corr=F(x)/derive_5points(F,x,h);
 		x=x-corr;
 		x=(x>=xmax)?xmax:x;
@@ -40,19 +31,6 @@ double findzero_newton_raphson_yeps(std::function<double(double)> F,const double
 	double x{x0};
 
 	while( std::abs(F(x)) > epsilon ){
-
-		#ifdef DEBUG
-		std::cout<<"cond= "<< (std::abs(F(x)) - epsilon) <<std::endl;
-		#endif
-
-		#ifdef DEBUG
-		std::cout<<"NR:x= "<<x<<std::endl;
-		#endif 
-
-		#ifdef DEBUG
-		std::cout<<"NR:corr= "<<F(x)/derive_5points(F,x,h)<<std::endl;
-		#endif
-
 
 		x=x-F(x)/derive_5points(F,x,h);
 	}
@@ -107,14 +85,17 @@ double findzero_secants_xeps(std::function<double(double)> F, double x0,double x
 	}
 	return (x2+x1)/2;
 }
-/*
-x0=-.5
-x1=0
-x2=sensato
-x1=sensato
-x0=0
 
-*/
+double findzero_secants_xdigits(std::function<double(double)> F, double x0,double x1,const int digits){
+	double x2{x1-F(x1)*(x1-x0)/(F(x1)-F(x0))}; 
+
+	while( number_of_significant_digits((x2+x1)/2,(x2-x0)/2) < digits){
+		x0=x1; 
+		x1=x2;
+		x2=x1-F(x1)*(x1-x0)/(F(x1)-F(x0)); 
+	}
+	return (x2+x1)/2;
+}
 
 double derive_5points(std::function<double(double)> F,const double x0,const double h){
 	// 5 points derivative
