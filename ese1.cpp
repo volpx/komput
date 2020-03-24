@@ -30,11 +30,6 @@ double F(double E_tilde,double gamma, uint8_t n){
 	// };
 	double xin{ std::pow( -2/E_tilde - 2*std::sqrt( (1/E_tilde+1)/E_tilde) ,1.0/6) };
 	double xout{ std::pow( -2/E_tilde + 2*std::sqrt( (1/E_tilde+1)/E_tilde) ,1.0/6) };
-	
-	#ifdef DEBUG
-	if (xin<0 || xout<0)
-		std::cout<<" "<<xin<<" "<<xout<<std::endl;
-	#endif
 
 	double I{
 		(E_tilde>=0) ? 0.8413092631952725567050114474301765:
@@ -44,7 +39,6 @@ double F(double E_tilde,double gamma, uint8_t n){
 	return gamma*I-M_PI*(n+0.5);
 }
 
-
 int main(){
 	
 	// double x{},corr{};
@@ -53,22 +47,23 @@ int main(){
 	// std::cout<<"Sig dig: "<<number_of_significant_digits(x,corr)<<std::endl;
 	// return 0;
 
-	const double gamma{21.7};
+	const double gamma{150};
+	const int n_max{39};
 
-	std::vector<double> aut(100);
+	std::vector<double> aut(n_max+1);
 
 	std::cout<<"Gamma= "<<gamma<<std::endl;
 	
 	double E_tilde_0{-0.5};
-	double epsilon{1e-10};
-	double h_diff{1e-10};
+	// double epsilon{1e-10};
+	// double h_diff{1e-10};
 	// double hw{1};
 	double autov_E_tilde{E_tilde_0};
 	double autov_E_tilde_harmonic{};
 
-	std::cout<<"E_tilde_0= "<<E_tilde_0<<std::endl;
-	std::cout<<"epsilon= "<<epsilon<<std::endl;
-	std::cout<<"h_diff= "<<h_diff<<std::endl;
+	// std::cout<<"E_tilde_0= "<<E_tilde_0<<std::endl;
+	std::cout<<"n_max= "<<n_max<<std::endl;
+	// std::cout<<"h_diff= "<<h_diff<<std::endl;
 
 
 	// double E;
@@ -77,28 +72,28 @@ int main(){
 	// 	std::cout<<"E= "<<E<<",F(E)= "<<F(E,150,25)<<std::endl;
 	// }
 
-	int n{0};
-	while(autov_E_tilde<0){
-	// for (int n{0};n<=100;++n){
+	// int n{0};
+	// while(autov_E_tilde<0){
+	for (int n{0};n<=n_max;++n){
 
 		std::function<double(double)> G{
 			[&] (double E_tilde)->double { return F(E_tilde,gamma,n); }
 		};
 		// autov_E_tilde=findzero_newton_raphson_xeps(G,autov_E_tilde,epsilon,h_diff,-INFINITY,0-epsilon);
-		// autov_E_tilde=findzero_secants_xeps(G,autov_E_tilde,0,epsilon);
-		autov_E_tilde=findzero_secants_xdigits(G,autov_E_tilde,0,5);
+		// autov_E_tilde=findzero_secants_xeps(G,autov_E_tilde,0,1e-10);
+		autov_E_tilde=findzero_secants_xdigits(G,autov_E_tilde,0,7,-1,0);
 		// autov_E_tilde=findzero_bisection_xeps(G,autov_E_tilde,0-epsilon,epsilon);
 
 		autov_E_tilde_harmonic=1/gamma*std::sqrt(24*13/std::pow(2,7.0/3)-12*7/std::pow(2,4.0/3))*(n+0.5)-1;
 
-		std::cout<<"Autovalore n="<<n<<boost::format(", E_tilde= %.5e, E_tilde_h= %.5e") % autov_E_tilde % autov_E_tilde_harmonic <<std::endl;
+		std::cout<<"Autovalore n="<<n<<boost::format(", E_tilde= %.7e, E_tilde_h= %.7e") % autov_E_tilde % autov_E_tilde_harmonic <<std::endl;
 
 		aut[n]=autov_E_tilde;
-		++n;
+		// ++n;
 	}
 
 
-	// tocsv({{"autov",aut}},"output_data/autv12.7.csv");
+	tocsv({{"autov",aut}},"output_data/autv_150.csv",7);
 	return 0;
 }
 

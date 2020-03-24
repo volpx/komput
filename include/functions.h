@@ -6,6 +6,7 @@
 #include <fstream>
 #include <functional>
 #include <cmath>
+#include <boost/format.hpp>
 
 
 int number_of_significant_digits(double x,double corr);
@@ -38,10 +39,12 @@ double findzero_bisection_yeps(std::function<double(double)> F,double xmin,doubl
  * F functoin for the zero
  * x0 is the starting point
  * x1 is the other secant starting point
- * epsilon is the precision
+ * epsilon is the precision or digits is the number of significant digits needed
  */
-double findzero_secants_xeps(std::function<double(double)> F, double x0,double x1,const double epsilon);
-double findzero_secants_xdigits(std::function<double(double)> F, double x0,double x1,const int digits);
+double findzero_secants_xeps(std::function<double(double)> F, double x0,double x1,
+    const double epsilon=1e-16,const double xmin=-INFINITY,const double xmax=INFINITY);
+double findzero_secants_xdigits(std::function<double(double)> F, double x0,double x1,
+    const int digits=5,const double xmin=-INFINITY,const double xmax=INFINITY);
 
 /* Derivator with 5 points rule
  * of function F
@@ -57,7 +60,9 @@ double derive_5points(std::function<double(double)> F,const double x0,const doub
  */
 double integrator_simpson_cubic(std::function<double(double)> F,const double xmin,const double xmax,const uint32_t M);
 
-void tocsv(const std::vector<std::pair<std::string, std::vector<double>>>& data, std::ofstream& file);
-void tocsv(const std::vector<std::pair<std::string, std::vector<double>>>& data, const std::string& fname);
+void tocsv(const std::vector<std::pair<std::string, std::vector<double>>>& data, std::ofstream& file,
+    const int digits=5);
+void tocsv(const std::vector<std::pair<std::string, std::vector<double>>>& data, const std::string& fname,
+    const int digits=5);
 
 #endif //__FUNCTIONS_H__

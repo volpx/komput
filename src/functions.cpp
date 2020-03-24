@@ -75,26 +75,34 @@ double findzero_bisection_xeps(std::function<double(double)> F,double xmin,doubl
 	return xmiddle;
 }
 
-double findzero_secants_xeps(std::function<double(double)> F, double x0,double x1,const double epsilon){
-	double x2{x1-F(x1)*(x1-x0)/(F(x1)-F(x0))}; 
+double findzero_secants_xeps(
+	std::function<double(double)> F, double x0,double x1,const double epsilon,
+	const double xmin,const double xmax){
 
-	while(std::abs(x2-x1) > epsilon){
+	double corr{-F(x1)/( (F(x1)-F(x0))/(x1-x0) )}; 
+
+	while(x1!=x0 && std::abs(corr) > epsilon){
+		corr=-F(x1)/( (F(x1)-F(x0))/(x1-x0) );
 		x0=x1; 
-		x1=x2;
-		x2=x1-F(x1)*(x1-x0)/(F(x1)-F(x0)); 
+		x1=x1+corr; 
+		x1=x1>xmax?xmax:x1<xmin?xmin:x1;
 	}
-	return (x2+x1)/2;
+	return (x0+x1)/2;
 }
 
-double findzero_secants_xdigits(std::function<double(double)> F, double x0,double x1,const int digits){
-	double x2{x1-F(x1)*(x1-x0)/(F(x1)-F(x0))}; 
+double findzero_secants_xdigits(
+	std::function<double(double)> F, double x0,double x1,const int digits,
+	const double xmin,const double xmax){
+		
+	double corr{-F(x1)/( (F(x1)-F(x0))/(x1-x0) )}; 
 
-	while( number_of_significant_digits((x2+x1)/2,(x2-x0)/2) < digits){
+	while( x1!=x0 && number_of_significant_digits((x1+x0)/2,corr) < digits ){
+		corr=-F(x1)/( (F(x1)-F(x0))/(x1-x0) );
 		x0=x1; 
-		x1=x2;
-		x2=x1-F(x1)*(x1-x0)/(F(x1)-F(x0)); 
+		x1=x1+corr; 
+		x1=x1>xmax?xmax:x1<xmin?xmin:x1;
 	}
-	return (x2+x1)/2;
+	return (x0+x1)/2;
 }
 
 double derive_5points(std::function<double(double)> F,const double x0,const double h){
@@ -121,7 +129,7 @@ double integrator_simpson_cubic(std::function<double(double)> F,const double xmi
 	return h/3*result;
 }
 
-void tocsv(const std::vector<std::pair<std::string, std::vector<double>>>& data, std::ofstream& file){
+void tocsv(const std::vector<std::pair<std::string, std::vector<double>>>& data, std::ofstream& file, const int digits){
 	uint64_t cols=data.size();
 
 	file << "#";
@@ -136,7 +144,7 @@ void tocsv(const std::vector<std::pair<std::string, std::vector<double>>>& data,
 
 	for(uint64_t i{0};i<data[0].second.size(); ++i){
 		for(uint64_t j{0};j<cols; ++j){
-			file<<data[j].second[i];
+			file<< boost::format((boost::format("%%.%de")%digits).str()) % data[j].second[i];
 			if(j != cols - 1)
 				file << ","; // No comma at end of line
 		}
@@ -146,8 +154,8 @@ void tocsv(const std::vector<std::pair<std::string, std::vector<double>>>& data,
 	return;
 }
 
-void tocsv(const std::vector<std::pair<std::string, std::vector<double>>>& data, const std::string& fname){
+void tocsv(const std::vector<std::pair<std::string, std::vector<double>>>& data, const std::string& fname, const int digits){
 	std::ofstream file(fname);
-	tocsv(data,file);
+	tocsv(data,file,digits);
 	file.close();
 }
