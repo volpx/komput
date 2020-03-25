@@ -1,7 +1,7 @@
 # Komput
 
-Currently is all held up by the standard library but things could change.
-Good reference to undestand the code could be [Learn CPP](learncpp.com) and [CPP Reference](en.cppreference.com)
+Currently is all held up by the standard library and boost library but things could change.
+Good reference to undestand the code could be [Learn CPP](learncpp.com) and [CPP Reference](en.cppreference.com).
 
 ## Instructions
 To run the different main(s) should be enough to:
@@ -17,8 +17,8 @@ gnuplot -persistent <program_name>.plot
 ```
 ## Requirements
 
-Make sure to have the following installed and/or reachable via `PATH` variable:
+Make sure to have the following installed and/or reachable via random `PATH` variables:
 * `make`
 * `g++ & gcc`
 * `gnuplot` for plots
-* `boost` currently not used but nice to have
+* `boost` for additional functionalities

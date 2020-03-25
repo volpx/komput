@@ -1,8 +1,18 @@
 #!/bin/bash
+set -e
 
 echo "Henlo!"
 
+makestring="NAME: \$(OBJS) \$(OBJ_DIR)/NAME.o\n\t\
+\$(CPP) -o \$@ \$^ \$(CPP_FLAGS) \$(L_FLAGS)\n"
+
 case "$1" in
+    add)  
+        echo "adding $2 to makefile"
+        echo -ne "${makestring//NAME/$2}" >> makefile
+        echo "adding $2 to .gitignore"
+        echo -ne "$2\n" >> .gitignore
+    ;;
 
     GL-LL)  echo "GL-LL"
         make GL-LL
