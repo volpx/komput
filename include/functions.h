@@ -60,9 +60,24 @@ double derive_5points(std::function<double(double)> F,const double x0,const doub
  */
 double integrator_simpson_cubic(std::function<double(double)> F,const double xmin,const double xmax,const uint32_t M);
 
+/* Solve differential equation 
+ * of function F 
+ * for a step of size h
+ * t and y are the initial value 
+ */
+double runge_kutta_1(std::function<double(double,double)> F, double t, double y, double h);
+
+void runge_kutta_2(std::function<double(double,double,double)> f1, std::function<double(double,double,double)> f2,
+	double t, double x1,double x2, double h,double *x1_,double *x2_);
+
+
+
 void tocsv(const std::vector<std::pair<std::string, std::vector<double>>>& data, std::ofstream& file,
     const int digits=5);
 void tocsv(const std::vector<std::pair<std::string, std::vector<double>>>& data, const std::string& fname,
     const int digits=5);
+
+void arange(std::vector<double>& vec, const double start, const double step);
+void linespace(std::vector<double>& vec, const double xmin, const double xmax);
 
 #endif //__FUNCTIONS_H__

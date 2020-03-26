@@ -87,7 +87,7 @@ double findzero_secants_xeps(
 		x1=x1+corr; 
 		x1=x1>xmax?xmax:x1<xmin?xmin:x1;
 	}
-	return (x0+x1)/2;
+	return x1;
 }
 
 double findzero_secants_xdigits(
@@ -131,6 +131,48 @@ double integrator_simpson_cubic(std::function<double(double)> F,const double xmi
 
 	return h/3*result;
 }
+
+double runge_kutta_1(std::function<double(double,double)> F, double t, double y, double h){
+
+	double k1{ F(t,y) };
+	double k2{ F(t+h/2,y+k1/2) };
+	double k3{ F(t+h/2,y+k2/2) };
+	double k4{ F(t+h,y+k3) };
+
+	return y+h/6*(k1+2*k2+2*k3+k4);
+}
+
+void runge_kutta_2(std::function<double(double,double,double)> f1, std::function<double(double,double,double)> f2,
+	double t, double x1,double x2, double h,double *x1_,double *x2_){
+
+	double k11{f1(t,x1,x2)};
+	double k21{f2(t,x1,x2)};
+
+	double k12{f1(t+h/2,x1+h/2*k11,x2+h/2*k21)};
+	double k22{f2(t+h/2,x1+h/2*k11,x2+h/2*k21)};
+
+	double k13{f1(t+h/2,x1+h/2*k12,x2+h/2*k22)};
+	double k23{f2(t+h/2,x1+h/2*k12,x2+h/2*k22)};
+	
+	double k14{f1(t+h,x1+h*k13,x2+h*k23)};
+	double k24{f2(t+h,x1+h*k13,x2+h*k23)};
+	
+	*x1_=x1+h/6*(k11+2*k12+2*k13+k14);
+	*x2_=x2+h/6*(k21+2*k22+2*k23+k24);
+}
+
+void arange(std::vector<double>& vec, const double start, const double step){
+	uint32_t M{ static_cast<uint32_t>(vec.size()) };
+	for(uint32_t i{0};i<M;++i){
+		vec[i]=start+i*step;
+	}
+}
+void linespace(std::vector<double>& vec, const double xmin, const double xmax){
+	double h{(xmax-xmin)/(vec.size()-1)};
+	arange(vec,xmin,h);
+}
+
+
 
 void tocsv(const std::vector<std::pair<std::string, std::vector<double>>>& data, std::ofstream& file, const int digits){
 	uint64_t cols=data.size();
