@@ -103,3 +103,5 @@ ese1: $(OBJS) $(OBJ_DIR)/ese1.o
 	$(CPP) -o $@ $^ $(CPP_FLAGS) $(L_FLAGS)
 try: $(OBJS) $(OBJ_DIR)/try.o
 	$(CPP) -o $@ $^ $(CPP_FLAGS) $(L_FLAGS)
+ese2: $(OBJS) $(OBJ_DIR)/ese2.o
+	$(CPP) -o $@ $^ $(CPP_FLAGS) $(L_FLAGS)
