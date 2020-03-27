@@ -1,7 +1,5 @@
 #include "functions.h"
 
-#include <iostream>
-
 int number_of_significant_digits(double x,double corr){
 	return (int) std::log10(x/corr);
 }
