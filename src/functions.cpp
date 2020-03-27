@@ -159,8 +159,8 @@ void runge_kutta_2(std::function<double(double,double,double)> f1, std::function
 	*x2_=x2+h/6*(k21+2*k22+2*k23+k24);
 }
 
-void map(std::vector<double>& vec,std::function<double(uint32_t)> f){
-	uint32_t M{ static_cast<uint32_t>(vec.size()) };
+void map(std::vector<double>& vec, const std::function<double(uint32_t)> f){
+	const uint32_t M{ static_cast<uint32_t>(vec.size()) };
 	for(uint32_t i{0};i<M;++i){
 		vec[i]=f(i);
 	}
@@ -172,10 +172,10 @@ void arange(std::vector<double>& vec, const double start, const double step){
 	map(vec,f);
 }
 void linespace(std::vector<double>& vec, const double xmin, const double xmax){
-	double h{(xmax-xmin)/(vec.size()-1)};
+	const double h{(xmax-xmin)/(vec.size()-1)};
 	arange(vec,xmin,h);
 }
-void fill(std::vector<double>& vec,double val){
+void fill(std::vector<double>& vec,const double val){
 	std::function<double(uint32_t)> f{
 		[&] (uint32_t i)->double { return val; }
 	};
