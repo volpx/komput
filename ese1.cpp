@@ -1,3 +1,5 @@
+#include "integrate.h"
+#include "findzero.h"
 #include "functions.h"
 
 #include <cstdint>
