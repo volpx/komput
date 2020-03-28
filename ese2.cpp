@@ -51,7 +51,7 @@ int main(int argc, char const *argv[]){
 	std::vector<double> mass(n.size());
 
 	std::cout<<boost::format("Initial configuration\n\
-		\r\tM: %d\n\tintegration step: %f\n\ttheta_0: %f\n\tphi_0: %f\n") %M % h % theta_0 % phi_0 
+		\r\tM: %d\n\tintegration step: %f\n\ttheta_0: %f\n\tphi_0: %f\n") %M % h % theta_0 % phi_0
 		<<std::endl;
 
 	for(uint32_t j=0;j<static_cast<uint32_t>(n.size());++j){
@@ -63,7 +63,7 @@ int main(int argc, char const *argv[]){
 
 
 		for(uint32_t i=1;i<M;++i){
-			runge_kutta_2(f1,f2,x[i],theta[i-1],phi[i-1],h,&(theta[i]),&(phi[i]));
+			RK_2_step(f1,f2,x[i],theta[i-1],phi[i-1],h,&(theta[i]),&(phi[i]));
 		}
 
 		mass[j]=std::pow(alpha,3)*M_PI;
@@ -90,7 +90,7 @@ int main(int argc, char const *argv[]){
 
 
 		for(uint32_t i=1;i<M;++i){
-			runge_kutta_2(f1,f2,x[i],theta[i-1],phi[i-1],h,&(theta[i]),&(phi[i]));     
+			RK_2_step(f1,f2,x[i],theta[i-1],phi[i-1],h,&(theta[i]),&(phi[i]));
 		}
 
 		tocsv(
@@ -99,5 +99,5 @@ int main(int argc, char const *argv[]){
 			(boost::format("output_data/neutron_n_%.2f.csv") % n[j]).str() );
 	}
 
-	return 0; 
+	return 0;
 }

@@ -22,3 +22,38 @@ void fill(std::vector<double>& vec,const double val){
 	};
 	map(vec,f);
 }
+
+uint32_t ind_min(std::vector<double>& vec,
+				std::function<double(double)> map){
+
+	uint32_t ind{0};
+	double val{map?map(vec[0]):vec[0]};
+
+	for (uint32_t i{0};i<static_cast<uint32_t>(vec.size());++i){
+		if (nullptr){
+			if (map(vec[i])<val){
+				val=map(vec[i]);
+				ind=i;
+			}
+		}
+		else{
+			if (vec[i]<val){
+				val=vec[i];
+				ind=i;
+			}
+		}
+	}
+
+	return ind;
+}
+uint32_t ind_max(std::vector<double>& vec,
+				std::function<double(double)> map){
+	if (map){
+		return ind_min(vec,
+			[&](double x)-> double {return -map(x);});
+	}
+	else{
+		return ind_min(vec,
+			[&](double x)-> double {return -x;});
+	}
+}
