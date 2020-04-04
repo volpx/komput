@@ -7,7 +7,7 @@ double predictor_corrector(std::function<double(double,double)> F,double y,doubl
 	return y + h*0.5*(k1+k2);
 }
 
-double RK_1(const std::function<double(double,double)> F, const double t, const double y, const double h){
+double RK_1_step(const std::function<double(double,double)> F, const double t, const double y, const double h){
 
 	double k1{ F(t,y) };
 	double k2{ F(t+h/2,y+k1/2) };
@@ -17,7 +17,7 @@ double RK_1(const std::function<double(double,double)> F, const double t, const 
 	return y+h/6*(k1+2*k2+2*k3+k4);
 }
 
-void RK_2(const std::function<double(double,double,double)> f1,
+void RK_2_step(const std::function<double(double,double,double)> f1,
 	const std::function<double(double,double,double)> f2,
 	const double t, const double x1, const double x2,
 	const double h, double *x1_, double *x2_){
