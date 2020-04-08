@@ -10,21 +10,31 @@
 #include <cmath>
 #include <boost/format.hpp>
 
-// dtheta_t/dxi = phi(x,theta,phi)
+// dtheta_t/dx = phi(x,theta,phi)
 double f1(double x,double theta,double phi){
 	return phi;
 }
 
-// dphi/dzeta = f2(x,theta,phi)
-// double f2(double x,double theta,double phi){
-// 	return -2/x*phi-theta;
-// }
+// dphi/dx = f2(x,theta,phi)
 double f2_tmp(double x,double theta,double phi,
 				double n){
 	return -2/x*phi-std::pow(theta,n);
 }
 
-#define PART 2
+
+// modified
+// dtheta_t/dx = phi(x,theta,m)
+double f1_m(double x,double theta,double m){
+	return -m/x/x;
+}
+
+// dm/dx = f2(x,theta,m)
+double f2_tmp_m(double x,double theta,double phi,
+				double n){
+	return std::pow(x,2)*std::pow(theta,n);
+}
+
+#define PART 1
 int main(int argc, char const *argv[]){
 	#if PART == 0
 	// mathematical portion
@@ -97,6 +107,80 @@ int main(int argc, char const *argv[]){
 			{"theta",theta}},
 			(boost::format("output_data/neutron_n_%.2f.csv") % n[j]).str() );
 	}
+	#elif PART==1
+	// mathematical portion modified version
+
+	double theta_0{1};
+	double m_0{0};
+	// start of integrating interval
+	double x_0{0+1e-5};
+
+	// end of the interval (exluded)
+	double x_end{7};
+	uint32_t M{1000};
+	double h{(x_end-x_0)/M};
+
+	std::vector<double> n(7);
+	linespace(n,1.5,3);
+
+	std::vector<double> theta(M);
+	std::vector<double> m(M);
+	std::vector<double> x(M);
+	theta[0]=theta_0;
+	m[0]=m_0;
+	arange(x,x_0,h);
+
+	std::cout<<boost::format("Initial configuration\n\
+		\r\tM: %d\n\tintegration step: %f\n\ttheta_0: %f\n\tm_0: %f\n") %M % h % theta_0 % m_0
+		<<std::endl;
+
+	for(uint32_t j=0;j<static_cast<uint32_t>(n.size());++j){
+	// for(uint32_t j=0;j<;++j){
+		std::cout<<"Integrating n: "<<n[j]<<std::endl;
+
+		std::function<double(double,double,double)> f2_m{
+			[&] (double x,double theta,double m)->double { return f2_tmp_m(x,theta,m,n[j]); }
+		};
+
+
+		for(uint32_t i=1;i<M;++i){
+			RK_2_step(f1_m,f2_m,x[i],theta[i-1],m[i-1],h,&(theta[i]),&(m[i]));
+		}
+
+		tocsv(
+			{{"x",x},
+			{"theta",theta},
+			{"m",m}},
+			(boost::format("output_data/neutron_mod_n_%.2f.csv") % n[j]).str());
+	}
+
+	n.clear();
+	n.push_back(1.0);
+	n.push_back(4.5);
+	x_end=40;
+	h=(x_end-x_0)/M;
+	arange(x,x_0,h);
+
+	for(uint32_t j=0;j<static_cast<uint32_t>(n.size());++j){
+	// for(uint32_t j=0;j<;++j){
+		std::cout<<"Integrating n: "<<n[j]<<std::endl;
+
+		std::function<double(double,double,double)> f2_m{
+			[&] (double x,double theta,double m)->double { return f2_tmp_m(x,theta,m,n[j]); }
+		};
+
+
+		for(uint32_t i=1;i<M;++i){
+			RK_2_step(f1_m,f2_m,x[i],theta[i-1],m[i-1],h,&(theta[i]),&(m[i]));
+		}
+
+		tocsv(
+			{{"x",x},
+			{"theta",theta},
+			{"m",m}},
+			(boost::format("output_data/neutron_mod_n_%.2f.csv") % n[j]).str());
+	}
+
 	#elif PART==2
 
 	double n=3.0/2;
@@ -110,7 +194,7 @@ int main(int argc, char const *argv[]){
 
 	double h_bar=1.05457148e-34; // J*s
 	double m_n=1.67492749804e-27; // Kg
-	double k_1_5=std::pow(h_bar,2)*std::pow(3*M_PI*M_PI,2.0/3)/(2*std::pow(m_n,8.0/3)); //
+	double k_1_5=std::pow(h_bar,2)*std::pow(3*M_PI*M_PI,2.0/3)/(5*std::pow(m_n,8.0/3)); //
 	double G=6.67430e-11; // Jm/Kg^2
 
 	std::cout<<"Setted n: "<<n<<"\nphi_0: "<<phi_0<<"\nk3/2: "<<k_1_5<<std::endl;

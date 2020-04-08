@@ -23,7 +23,7 @@ void fill(std::vector<double>& vec,const double val){
 	map(vec,f);
 }
 
-uint32_t ind_min(std::vector<double>& vec,
+uint32_t ind_min(const std::vector<double>& vec,
 				std::function<double(double)> map){
 
 	uint32_t ind{0};
@@ -46,7 +46,7 @@ uint32_t ind_min(std::vector<double>& vec,
 
 	return ind;
 }
-uint32_t ind_max(std::vector<double>& vec,
+uint32_t ind_max(const std::vector<double>& vec,
 				std::function<double(double)> map){
 	if (map){
 		return ind_min(vec,
