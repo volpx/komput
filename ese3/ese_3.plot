@@ -1,23 +1,23 @@
 #!/usr/bin/env gnuplot
-# Set the output as latexcode
-# set terminal epslatex standalone
+# Set output format
+set term pngcairo size 720,640
 # Input file contains comma-separated values fields
 set datafile separator ","
-# set grid
-set format xy "$%g$"
-
-# Where to write to
-# set output "output_data/nice_neutron.tex"
-set title "$\\theta$ for stable values fo $n$"
-set xlabel "$x$"
-set ylabel "$\\theta_n(x)$"
-# set xrange [0:7.5]
-# set yrange [-0:1.01]
 set hidden3d
 set pm3d
+set grid
+
+# Where to write to
+set output "output_data/heat.png"
+set title "Diffusion"
+set ylabel "Time"
+set xlabel "Space"
+set zlabel "Temperature?"
+# set xrange [0:7.5]
+# set yrange [-0:1.01]
 # set log z
-splot "output_data/res.dat" matrix
+set view 60,360-50-90
+set ticslevel 0
+splot "output_data/res_LU.dat" matrix nonuniform notitle
 # Write to file
-# set output
-# Make the pdf
-# !pdflatex -output-directory=output_data output_data/nice_neutron.tex
+set output
