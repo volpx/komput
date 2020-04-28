@@ -36,9 +36,9 @@ class LU_Solver{
 		const std::function<double(uint32_t)> dp
 	);
 	void step(
-		const uint32_t m0,
 		const std::vector<double> *u_p0,
-		std::vector<double> *u_p1
+		std::vector<double> *u_p1,
+		const uint32_t m0=0
 	);
 
 	private:

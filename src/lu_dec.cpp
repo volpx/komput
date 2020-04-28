@@ -33,9 +33,9 @@ void LU_Solver::step_setup(
 }
 
 void LU_Solver::step(
-	const uint32_t m0,
 	const std::vector<double> *u_p0,
-	std::vector<double> *u_p1)
+	std::vector<double> *u_p1,
+	const uint32_t m0)
 	{
 
 	// Eq. 61
