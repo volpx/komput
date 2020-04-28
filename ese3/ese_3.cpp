@@ -1,3 +1,4 @@
+#include "lu_dec.h"
 #include "vector_help.h"
 #include "integrate.h"
 #include "findzero.h"
@@ -61,15 +62,18 @@ int main(int argc, char const *argv[]){
 	};
 	map(*u_x_p0,g_i);
 	// CI: u(t,0)=0
+	auto qmin=[&] (uint32_t m)->double {
+		return 0;
+	};
 	(*u_x_p0)[0]=0;
 	(*u_x_p1)[0]=0;
 	// CI: u(t,L)=2*E+E*(1-exp(-t/tau))
-	auto q_i=[&] (uint32_t m)->double {
+	auto qmax=[&] (uint32_t m)->double {
 		// return 2*E+E*(1-std::exp(-(T0+m*dt)/((T-T0)/5)));
 		return 2*E;
 	};
-	(*u_x_p0)[Nx-1]=q_i(0);
-	(*u_x_p1)[Nx-1]=q_i(0);
+	(*u_x_p0)[Nx-1]=qmax(0);
+	(*u_x_p1)[Nx-1]=qmax(0);
 
 	#ifdef EXPLICIT
 	// Setup output stream
@@ -90,7 +94,7 @@ int main(int argc, char const *argv[]){
 	// Evolution
 	for (uint32_t m=1;m<Nt;++m){
 		// Bound condition
-		(*u_x_p1)[Nx-1]=q_i(m);
+		(*u_x_p1)[Nx-1]=qmax(m);
 
 		// Write time and first bound
 		file<<m*dt+T0;
@@ -128,22 +132,8 @@ int main(int argc, char const *argv[]){
 		return -0.5*(beta*n+alpha*n*n);
 	};
 
-	std::vector<double> en(Nx-3);
-	std::vector<double> e0(Nx-2);
-	std::vector<double> ep(Nx-3);
-
-	std::vector<double> xx(Nx-2);
-
-	// eq. 57
-	ep[0]=dp(1);
-	e0[0]=d0(1);
-	en[0]=dn(2)/e0[0];
-	for(uint32_t n=1;n<Nx-3;++n){
-		ep[n]=dp(n+1);
-		e0[n]=d0(n+1)-dn(n+1)*ep[n-1]/e0[n-1];
-		en[n]=dn(n+2)/e0[n];
-	}
-	e0[Nx-3]=d0(Nx-3+1)-dn(Nx-3+1)*ep[Nx-3-1]/e0[Nx-3-1];
+	LU_Solver solver(Nx,qmin,qmax);
+	solver.step_setup(dn,d0,dp);
 
 	// Setup output stream
 	std::ofstream file("output_data/res_LU.dat");
@@ -160,24 +150,11 @@ int main(int argc, char const *argv[]){
 		file<<','<<(*u_x_p0)[n];
 	}
 	file<<'\n';
+
 	// Evolution
 	for(uint32_t m=1;m<Nt;++m){
-		// Eq. 44 gina dura
-		(*u_x_p0)[1]-=dn(0)*0;
-		(*u_x_p0)[Nx-2]-=dp(Nx-1)*q_i(m+1);
 
-		// Eq. 61
-		xx[0]=(*u_x_p0)[1];
-		for(uint32_t n=1;n<Nx-2;++n){
-			xx[n]=(*u_x_p0)[n+1]-en[n-1]*xx[n-1];
-		}
-
-		// eq. 64
-		(*u_x_p1)[Nx-2]=xx[Nx-3]/e0[Nx-3];
-		for(uint32_t n=1;n<Nx-2;++n){
-			(*u_x_p1)[Nx-n-2]=xx[Nx-n-3]/e0[Nx-n-3]
-				-ep[Nx-n-3]/e0[Nx-n-3]*(*u_x_p1)[Nx-n-1];
-		}
+		solver.step(m-1,u_x_p0,u_x_p1);
 
 		// TODO: Save u_x_p1
 		// Write time and first bound
