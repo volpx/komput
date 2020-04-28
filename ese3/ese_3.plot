@@ -8,7 +8,7 @@ set pm3d
 set grid
 
 # Where to write to
-set output "output_data/heat.png"
+set output "output_data/heat_LU.png"
 set title "Diffusion"
 set ylabel "Time"
 set xlabel "Space"
