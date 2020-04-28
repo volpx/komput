@@ -16,7 +16,7 @@ set zlabel "Temperature?"
 # set xrange [0:7.5]
 # set yrange [-0:1.01]
 # set log z
-set view 60,360-50-90
+set view 60,360-50
 set ticslevel 0
 splot "output_data/res_LU.dat" matrix nonuniform notitle
 # Write to file

@@ -118,33 +118,36 @@ int main(int argc, char const *argv[]){
 	// Full implicit method: LU decomposition
 	// A * v_{m+1} = b_m
 
-	auto d_n = [&] (uint32_t n)->double{
+	auto dn = [&] (uint32_t n)->double{
+		return 0.5*(beta*n-alpha*n*n);
+	};
+	auto d0 = [&] (uint32_t n)->double{
 		return 1+beta+alpha*n*n;
 	};
-	auto u_n = [&] (uint32_t n)->double{
-		return -1.0/2*(beta*(n-1)+alpha*(n-1)*(n-1));
-	};
-	auto l_n = [&] (uint32_t n)->double{
-		return 1.0/2*(beta*(n+1)+alpha*(n+1)*(n+1));
+	auto dp = [&] (uint32_t n)->double{
+		return -0.5*(beta*n+alpha*n*n);
 	};
 
-	std::vector<double> aa(Nx-1);
-	std::vector<double> bb(Nx-1);
-	std::vector<double> cc(Nx-1);
+	std::vector<double> en(Nx-3);
+	std::vector<double> e0(Nx-2);
+	std::vector<double> ep(Nx-3);
 
-	std::vector<double> xx(Nx-1);
+	std::vector<double> xx(Nx-2);
 
 	// eq. 57
-	aa[0]=d_n(0+0+1);
-	cc[0]=u_n(0+1+1);
-	for(uint32_t n=1;n<Nx-1;++n){
-		aa[n]=d_n(n+1)-l_n(n)/aa[n-1]*u_n(n-1+2);
-		bb[n]=l_n(n)/aa[n-1];
-		cc[n]=u_n(n+2);
+	ep[0]=dp(1);
+	e0[0]=d0(1);
+	en[0]=dn(2)/e0[0];
+	for(uint32_t n=1;n<Nx-3;++n){
+		ep[n]=dp(n+1);
+		e0[n]=d0(n+1)-dn(n+1)*ep[n-1]/e0[n-1];
+		en[n]=dn(n+2)/e0[n];
 	}
+	e0[Nx-3]=d0(Nx-3+1)-dn(Nx-3+1)*ep[Nx-3-1]/e0[Nx-3-1];
 
 	// Setup output stream
 	std::ofstream file("output_data/res_LU.dat");
+	// Write x axis ticks
 	file<<"0";
 	for (uint32_t n=0;n<Nx;++n){
 		file<<','<<x[n];
@@ -157,26 +160,24 @@ int main(int argc, char const *argv[]){
 		file<<','<<(*u_x_p0)[n];
 	}
 	file<<'\n';
-
 	// Evolution
 	for(uint32_t m=1;m<Nt;++m){
 		// Eq. 44 gina dura
-		(*u_x_p0)[1]-=l_n(0)*0;
-		(*u_x_p0)[Nx-2]-=u_n(Nx-1)*q_i(m+1);
+		(*u_x_p0)[1]-=dn(0)*0;
+		(*u_x_p0)[Nx-2]-=dp(Nx-1)*q_i(m+1);
 
 		// Eq. 61
 		xx[0]=(*u_x_p0)[1];
 		for(uint32_t n=1;n<Nx-2;++n){
-			xx[n]=(*u_x_p0)[n+1]-bb[n]*xx[n-1];
+			xx[n]=(*u_x_p0)[n+1]-en[n-1]*xx[n-1];
 		}
 
 		// eq. 64
-		(*u_x_p1)[Nx-2]=xx[Nx-2]/aa[Nx-2];
+		(*u_x_p1)[Nx-2]=xx[Nx-3]/e0[Nx-3];
 		for(uint32_t n=1;n<Nx-2;++n){
-			(*u_x_p1)[Nx-n-2]=xx[Nx-n-2]/aa[Nx-n-2]
-				-cc[Nx-n-2]/aa[Nx-n-2]*(*u_x_p1)[Nx-n-1];
+			(*u_x_p1)[Nx-n-2]=xx[Nx-n-3]/e0[Nx-n-3]
+				-ep[Nx-n-3]/e0[Nx-n-3]*(*u_x_p1)[Nx-n-1];
 		}
-
 
 		// TODO: Save u_x_p1
 		// Write time and first bound
