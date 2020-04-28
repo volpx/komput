@@ -61,6 +61,7 @@ int main(int argc, char const *argv[]){
 		return (res>0)?res:0;
 	};
 	map(*u_x_p0,g_i);
+	tocsv({{"x",x},{"u",*u_x_p0}},"output_data/initialstatus.csv");
 	// CI: u(t,0)=0
 	auto qmin=[&] (uint32_t m)->double {
 		return 0;
@@ -75,9 +76,10 @@ int main(int argc, char const *argv[]){
 	(*u_x_p0)[Nx-1]=qmax(0);
 	(*u_x_p1)[Nx-1]=qmax(0);
 
+	#define EXPLICIT
 	#ifdef EXPLICIT
 	// Setup output stream
-	std::ofstream file("output_data/res.dat");
+	std::ofstream file("output_data/res_explicit.csv");
 	file<<"0";
 	for (uint32_t n=0;n<Nx;++n){
 		file<<','<<x[n];
@@ -117,7 +119,11 @@ int main(int argc, char const *argv[]){
 		u_x_p1=tmp;
 	}
 	file.close();
-	#endif
+
+	// Write out the last
+	tocsv({{"x",x},{"u",*u_x_p0}},"output_data/finalstatusexplicit.csv");
+
+	#else
 
 	// Full implicit method: LU decomposition
 	// A * v_{m+1} = b_m
@@ -135,8 +141,9 @@ int main(int argc, char const *argv[]){
 	LU_Solver solver(Nx,qmin,qmax);
 	solver.step_setup(dn,d0,dp);
 
+
 	// Setup output stream
-	std::ofstream file("output_data/res_LU.dat");
+	std::ofstream file("output_data/res_LU.csv");
 	// Write x axis ticks
 	file<<"0";
 	for (uint32_t n=0;n<Nx;++n){
@@ -154,7 +161,7 @@ int main(int argc, char const *argv[]){
 	// Evolution
 	for(uint32_t m=1;m<Nt;++m){
 
-		solver.step(m-1,u_x_p0,u_x_p1);
+		solver.step(u_x_p0,u_x_p1,m-1);
 
 		// TODO: Save u_x_p1
 		// Write time and first bound
@@ -171,5 +178,9 @@ int main(int argc, char const *argv[]){
 	}
 	file.close();
 
+	// Write out the last
+	tocsv({{"x",x},{"u",*u_x_p0}},"output_data/finalstatusLU.csv");
+
+	#endif
 	return 0;
 }
