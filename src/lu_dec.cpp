@@ -28,8 +28,8 @@ void LU_Solver::step_setup(
 	}
 	e0[Nx-3]=d0(Nx-3+1)-dn(Nx-3+1)*ep[Nx-3-1]/e0[Nx-3-1];
 
-	dn_0=dn(0);
-	dp_Nx_1=dp(Nx-1);
+	dn_1=dn(1);
+	dp_Nx_2=dp(Nx-2);
 }
 
 void LU_Solver::step(
@@ -39,11 +39,11 @@ void LU_Solver::step(
 	{
 
 	// Eq. 61
-	xx[0]=(*u_p0)[1]-dn_0*qmin(m0+1);
+	xx[0]=(*u_p0)[1]-dn_1*qmin(m0+1);
 	for(uint32_t n=1;n<Nx-3;++n){
 		xx[n]=(*u_p0)[n+1]-en[n-1]*xx[n-1];
 	}
-	xx[Nx-3]=(*u_p0)[Nx-3+1]-dp_Nx_1*qmax(m0+1)-en[Nx-3-1]*xx[Nx-3-1];
+	xx[Nx-3]=(*u_p0)[Nx-3+1]-dp_Nx_2*qmax(m0+1)-en[Nx-3-1]*xx[Nx-3-1];
 
 	// eq. 64
 	(*u_p1)[Nx-1]=qmax(m0+1);

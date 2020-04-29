@@ -49,8 +49,8 @@ class LU_Solver{
 	std::vector<double> e0;
 	std::vector<double> ep;
 	std::vector<double> xx;
-	double dn_0;
-	double dp_Nx_1;
+	double dn_1;
+	double dp_Nx_2;
 };
 
 #endif // __LU_DEC_H__
