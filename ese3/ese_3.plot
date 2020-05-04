@@ -40,9 +40,9 @@ set xlabel "S"
 set xrange [0:3*E]
 set yrange [-1:*]
 phi(x) = 1.0/2*(1+erf(x/sqrt(2)))
-f(x) = E*exp(-(a/2+1)**2*sigma**2/2*T)*( \
-	exp(sigma**2/8*T*(a/2+1)**2)*x/E*phi( (log(x/E)+T*sigma**2/2*(a/2+1))/sqrt(T*sigma**2/2) ) \
-	+ exp(sigma**2/8*T*(a/2)**2)*phi( (log(x/E)+T*sigma**2/2*(a/2))/sqrt(T*sigma**2/2) ) )
+f(x) = E*exp(-(a/2+1)**2*sigma**2*T)*( \
+	exp(sigma**2*T*(a/2+1)**2)*x/E*phi( (log(x/E)+T*sigma**2*(a/2+1))/sqrt(T*sigma**2) ) \
+	- exp(sigma**2*T*(a/2)**2)*phi( (log(x/E)+T*sigma**2*(a/2))/sqrt(T*sigma**2) ) )
 plot f(x) title "analitic solution" w line \
 , "output_data/initialstatus.csv" title "initial status" w line\
 , "output_data/finalstatusexplicit.csv" title "final status explicit" w line \
