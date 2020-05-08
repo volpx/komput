@@ -13,10 +13,10 @@
 
 
 int main(int argc, char const *argv[]){
-	uint32_t Nx=200; //200,1000
-	uint32_t Nt=2000; //2000,41000
-	// uint32_t Nx=1000; //200,1000
-	// uint32_t Nt=41000; //2000,41000
+	// uint32_t Nx=200; //200,1000
+	// uint32_t Nt=2000; //2000,41000
+	uint32_t Nx=1000; //200,1000
+	uint32_t Nt=41000; //2000,41000
 
 	double r=0.1;
 	double sigma=0.4;
@@ -61,7 +61,7 @@ int main(int argc, char const *argv[]){
 		return (res>0)?res:0;
 	};
 	map(*u_x_p0,g_i);
-	tocsv({{"x",x},{"u",*u_x_p0}},"output_data/initialstatus.csv");
+	tocsv({{"x",x},{"u",*u_x_p0}},"output_data/initialstatus_more.csv");
 	// CI: u(t,0)=0
 	auto qmin=[&] (uint32_t m)->double {
 		return 0;
@@ -76,10 +76,10 @@ int main(int argc, char const *argv[]){
 	(*u_x_p0)[Nx-1]=qmax(0);
 	(*u_x_p1)[Nx-1]=qmax(0);
 
-	#define EXPLICIT
+	// #define EXPLICIT
 	#ifdef EXPLICIT
 	// Setup output stream
-	std::ofstream file("output_data/res_explicit.csv");
+	std::ofstream file("output_data/res_explicit_more.csv");
 	file<<"0";
 	for (uint32_t n=0;n<Nx;++n){
 		file<<','<<x[n];
@@ -121,7 +121,7 @@ int main(int argc, char const *argv[]){
 	file.close();
 
 	// Write out the last
-	tocsv({{"x",x},{"u",*u_x_p0}},"output_data/finalstatusexplicit.csv");
+	tocsv({{"x",x},{"u",*u_x_p0}},"output_data/finalstatusexplicit_more.csv");
 
 	#else
 
@@ -143,7 +143,7 @@ int main(int argc, char const *argv[]){
 
 
 	// Setup output stream
-	std::ofstream file("output_data/res_LU.csv");
+	std::ofstream file("output_data/res_LU_more.csv");
 	// Write x axis ticks
 	file<<"0";
 	for (uint32_t n=0;n<Nx;++n){
@@ -179,7 +179,7 @@ int main(int argc, char const *argv[]){
 	file.close();
 
 	// Write out the last
-	tocsv({{"x",x},{"u",*u_x_p0}},"output_data/finalstatusLU.csv");
+	tocsv({{"x",x},{"u",*u_x_p0}},"output_data/finalstatusLU_more.csv");
 
 	#endif
 	return 0;
