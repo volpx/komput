@@ -35,6 +35,11 @@ Vec3D operator-(const Vec3D &a, const Vec3D &b)
 	return Vec3D{a.x - b.x, a.y - b.y, a.y - b.y};
 }
 
+Vec3D operator+(const Vec3D &a, const Vec3D &b)
+{
+	return Vec3D{a.x + b.x, a.y + b.y, a.y + b.y};
+}
+
 int init_lattice(std::vector<Vec3D> &pos, double dl, uint32_t n, uint32_t q)
 {
 	uint32_t N{pos.size()};

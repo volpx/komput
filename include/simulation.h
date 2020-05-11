@@ -21,6 +21,7 @@ public:
 	Vec3D getNormalized() const;
 
 	friend Vec3D operator-(const Vec3D &a, const Vec3D &b);
+	friend Vec3D operator+(const Vec3D &a, const Vec3D &b);
 };
 
 /* Init the cubic lattice positions with:
