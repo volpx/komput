@@ -31,6 +31,8 @@ public:
 	friend Vec3D operator+(const Vec3D &a, const Vec3D &b);
 	friend Vec3D operator*(const Vec3D &a, const double k);
 	friend Vec3D operator*(const double k, const Vec3D &a);
+
+	friend std::ostream &operator<<(std::ostream &out, const Vec3D &vec);
 };
 
 /* Init the cubic lattice positions with:

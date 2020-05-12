@@ -5,21 +5,20 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
-#include <boost/format.hpp>
+#include <fstream>
 
-double V_LJ(const double x)
+double V_LJ(double x)
 {
+	if (x < 1e-10)
+	{
+		x = 1e-10;
+	}
 	return 4 * (std::pow(1.0 / x, 12) - std::pow(1.0 / x, 6));
 }
 double V_LJ_1(const Vec3D &a, const Vec3D &b)
 {
 	double d2 = (a - b).norm2();
-	return 4 * (std::pow(1 / d2, 6) - std::pow(1 / d2, 3));
-}
-
-double V_LJ_diff(double x)
-{
-	return -4 * (12 / x * std::pow(1.0 / x, 12) - 6 / x * std::pow(1.0 / x, 6));
+	return 4 * (std::pow(1.0 / d2, 6) - std::pow(1.0 / d2, 3));
 }
 
 double V(const std::vector<Vec3D> &pos)
@@ -76,50 +75,194 @@ void calculate_F(
 	}
 }
 
+// Compute the acceleration on particle i
+void compute_acc_k(
+	Vec3D &acc,
+	const std::function<double(double)> Vr,
+	const std::vector<Vec3D> &pos,
+	double m,
+	size_t k,
+	double L)
+{
+	// Reset previous acceleration
+	acc = 0 * acc;
+	size_t N{pos.size()};
+	double d;
+	// x=r_ij-r_ij0 ==> dx=dr
+	// move the potential with the original position in the origin
+	// this way the derivative can be computed in 0 on variable x
+	// which directly varies the radial distance
+	auto v = [&](double x) -> double {
+		return Vr(d + x);
+	};
+
+	for (size_t i{0}; i < N; i++)
+	{
+		// Skip the self-case
+		if (i != k)
+		{
+			// TODO: check this when I'm more active
+			// Check  eventual alias
+			// The partile _can_ interact only one time as real or aliased
+			Vec3D alias = pos[i];
+			d = (pos[k] - alias).norm();
+
+			if (d > L / 2)
+			{
+				// calculate alias
+				alias.x += (pos[k].x < L / 2) ? ((alias.x < L / 2) ? 0 : -L) : ((alias.x < L / 2) ? L : 0);
+				alias.y += (pos[k].y < L / 2) ? ((alias.y < L / 2) ? 0 : -L) : ((alias.y < L / 2) ? L : 0);
+				alias.z += (pos[k].z < L / 2) ? ((alias.z < L / 2) ? 0 : -L) : ((alias.z < L / 2) ? L : 0);
+				d = (pos[k] - alias).norm();
+			}
+
+			// Check interaction limit
+			if (d < L / 2)
+			{
+				// Compute the derivative on function v around 0
+				double der = derive_5points(v, 0, 1e-10);
+				// add the contribute to the force using the difference versor
+				acc += (-der / d) * (pos[k] - alias);
+			}
+			// else no interaction:
+			// the case of unperfect packing of spheres
+		}
+	}
+}
+
+void save_positions(const std::vector<Vec3D> &pos, std::ofstream &f)
+{
+	size_t N{pos.size()};
+	for (size_t i{0}; i < N; i++)
+	{
+		f << i << " " << pos[i].x << " " << pos[i].y << " " << pos[i].z << "\n";
+	}
+}
+
 int main(int argc, char const *argv[])
 {
-	uint32_t N = 125;
 	uint32_t n = 5; // number of celles on side
-	uint32_t M = 1000;
-	{	// Physics quantities
-		// double m = 2.2 * std::pow(10.0, -22);	 //g
-		// double k_B = 1.38 * std::pow(10.0, -23); //J/K
-		// double T = 300;							 //K
-		// double rho = std::pow(10.0, 27);
-		// double K = std::sqrt(k_B * T / m);
-		// double dl = std::pow(rho, -1.0 / 3);
-		// double L = n * dl;
-		// double v_std = std::sqrt(k_B * T / m);
-	}
+	uint32_t N = n * n * n;
+	uint32_t M = 2;
+	// M = 1;
 
-	std::vector<Vec3D> pos(N);
-	std::vector<Vec3D> vel(N);
-	std::vector<Vec3D> F(N);
+	// Physics quantities
+	double e_r = 1.6e-19;						 // C
+	double m_r = 2.2e-25;						 // Kg
+	double kB_r = 1.38e-23;						 // J*K^-1
+	double T_r = 300;							 // K
+	double rho_r = 1e27;						 // #*m^-3
+	double eps_r = 0.02 * e_r;					 // J
+	double sigma_r = 3.94e-10;					 // m
+	double dl_r = std::pow(rho_r, -1.0 / 3);	 // m
+	double dt_r = 1e-12;						 // s
+	double vstd_r = std::sqrt(kB_r * T_r / m_r); // m*s^-1
+
+	// Problem quantities
+	double dl{dl_r / sigma_r};									  // Cell length
+	double L{n * dl};											  // Box length
+	double dt{std::sqrt(eps_r / m_r / sigma_r / sigma_r) * dt_r}; // Time step
+	double rho{std::pow(sigma_r, 3) * rho_r};					  // Density
+	double m{rho * std::pow(dl, 3)};							  // Mass of the particles
+	double vstd{vstd_r * std::sqrt(m_r / eps_r)};				  // std velocity
+
+	// Print info data
+	printf("dl:\t%f\nL:\t%f\ndt:\t%f\nrho:\t%f\nm:\t%f\nvstd:\t%f\n", dl, L, dt, rho, m, vstd);
+
+	// Evolution variables
+	std::vector<Vec3D> pos_a(N);
+	std::vector<Vec3D> vel_a(N);
+	std::vector<Vec3D> acc_a(N);
+	std::vector<Vec3D> pos_b(N);
+	std::vector<Vec3D> vel_b(N);
+	std::vector<Vec3D> acc_b(N);
+
+	std::vector<Vec3D> *pos0 = &pos_a;
+	std::vector<Vec3D> *pos1 = &pos_b;
+	std::vector<Vec3D> *vel0 = &vel_a;
+	std::vector<Vec3D> *vel1 = &vel_b;
+	std::vector<Vec3D> *acc0 = &acc_a;
+	std::vector<Vec3D> *acc1 = &acc_b;
+	std::vector<Vec3D> *tmp;
+
+	double E_tot{0};
+
+	// Setup output
+	std::ofstream pos_file("output_data/positions.dat");
+	pos_file << "#n x y z\n";
+	std::ofstream vel_file("output_data/velocities.dat");
+	std::ofstream energy_file("output_data/energy.dat");
+	energy_file << "#t E\n";
 
 	printf("Start\n");
 
 	// Initialize with uniform lattice conditions
 	printf("Init lattice\n");
-	init_lattice(pos, 1, n, 1);
+	init_lattice(*pos0, dl, n, 1);
+	apply_periodic_bounds(*pos0, L);
+	pos_file << "\n\n";
+	E_tot = V(*pos0);
 
 	// Initialize velocities as gaussian on the components
 	printf("Init velocities\n");
 	for (uint32_t i = 0; i < N; i++)
 	{
-		init_distribute_maxwell_boltzmann(vel[i], 1);
+		compute_acc_k((*acc0)[i], V_LJ, *pos0, m, i, L);
+		init_distribute_maxwell_boltzmann((*vel0)[i], vstd);
+		E_tot += 0.5 * m * (*vel0)[i].norm2();
 	}
+	printf("Initial energy: %f\n", E_tot);
+
+	energy_file << 0 << " " << E_tot << "\n";
 
 	// Velocity verlet
-	printf("Start verlet\n");
-	for (uint32_t i = 0; i < M; i++)
+	printf("Start velocity verlet\n");
+	for (uint32_t i = 1; i < M; i++)
 	{
-		// TODO: verlet and save datafiles
-		apply_periodic_bounds_unitary(pos);
+		// Velocity - Verlet
+		// Compute all new positions
+		for (uint32_t j = 0; j < N; j++)
+		{
+			(*pos1)[j] = (*pos0)[j] + dt * (*vel0)[j] + 0.5 * dt * dt * (*acc0)[j];
+		}
+		save_positions(*pos0, pos_file);
+		// Periodic conditions
+		apply_periodic_bounds(*pos1, L);
+		E_tot = V(*pos1);
+		// Compute all new velocities
+		for (uint32_t j = 0; j < N; j++)
+		{
+			compute_acc_k((*acc1)[j], V_LJ, *pos1, m, j, L);
+			(*vel1)[j] = (*vel0)[j] + 0.5 * dt * ((*acc0)[j] + (*acc1)[j]);
+			E_tot += 0.5 * m * (*vel1)[j].norm2();
+		}
+
+		// TODO: write out pos1,vel1,energy
+		energy_file << i << " " << E_tot << "\n";
+
+		// Swap pointers
+		tmp = pos1;
+		pos1 = pos0;
+		pos0 = tmp;
+
+		tmp = vel1;
+		vel1 = vel0;
+		vel0 = tmp;
+
+		tmp = acc1;
+		acc1 = acc0;
+		acc0 = tmp;
 	}
 
+	printf("Final energy: %f\n", E_tot);
 	printf("End\n");
 	// Pause
 	// getchar();
 
 	return 0;
+}
+
+double V_LJ_diff(double x)
+{
+	return -4 * (12 / x * std::pow(1.0 / x, 12) - 6 / x * std::pow(1.0 / x, 6));
 }
