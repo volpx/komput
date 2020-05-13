@@ -7,7 +7,7 @@
 #include <cmath>
 #include <fstream>
 
-double V(const std::vector<Vec3D> &pos);
+double Vf(const std::vector<Vec3D> &pos);
 double V_LJ(double x);
 void compute_acc_k(
 	Vec3D &acc,
@@ -18,30 +18,30 @@ void compute_acc_k(
 	double L);
 void save_positions(const std::vector<Vec3D> &pos, std::ofstream &f);
 
+#undef SAVE_POS
+
 int main(int argc, char const *argv[])
 {
 	uint32_t n = 5; // number of celles on side
 	uint32_t N = n * n * n;
 	uint32_t M = 1000000;
 
-	uint32_t Nfollow = 0; // Particle to follow
-
 	// Physics quantities
-	double e_r = 1.6e-19;					 // C
-	double kB_r = 1.38e-23;					 // J*K^-1
-	double T_r = 300;						 // K
-	double m_r = 2.2e-25;					 // Kg
-	double rho_r = 1e27;					 // #*m^-3
-	double dl_r = std::pow(rho_r, -1.0 / 3); // m
-	// double Time_r = 1e-12;						 // s
-	double dt_r = 1e-12 * 1e-4;					 // s
+	double e_r = 1.6e-19;						 // C
+	double kB_r = 1.38e-23;						 // J*K^-1
+	double T_r = 300;							 // K
+	double m_r = 2.2e-25;						 // Kg
+	double rho_r = 1e27;						 // #*m^-3
+	double dl_r = std::pow(rho_r, -1.0 / 3);	 // m
+	double dt_r = 1e-12;						 // s
 	double vstd_r = std::sqrt(kB_r * T_r / m_r); // m*s^-1
 	double sigma_r = 3.94e-10;					 // m
 	double eps_r = 0.02 * e_r;					 // J
 
 	// Modifications
-	// dt_r /= 10;
+	dt_r /= 1000;
 	// T_r = 10;
+	M = 50000;
 
 	// Problem quantities
 	double dl{dl_r / sigma_r};									  // Cell length
@@ -71,14 +71,16 @@ int main(int argc, char const *argv[])
 	std::vector<Vec3D> *tmp;
 
 	double E_tot{0};
+	double T{0};
+	double V{0};
 
-	// Setup output
+#ifdef SAVE_POS
 	std::ofstream pos_file("output_data/positions.dat");
 	pos_file << "#n x y z\n";
+#endif
 
-	// std::ofstream vel_file("output_data/velocities.dat");
 	std::ofstream energy_file("output_data/energy.dat");
-	energy_file << "#m t E\n";
+	energy_file << "#m t T V E\n";
 
 	printf("Start\n");
 
@@ -86,8 +88,13 @@ int main(int argc, char const *argv[])
 	printf("Init lattice\n");
 	init_lattice(*pos0, dl, n, 1);
 	apply_periodic_bounds(*pos0, L);
+
+#ifdef SAVE_POS
+	save_positions(*pos0, pos_file);
 	pos_file << "\n\n";
-	E_tot = V(*pos0);
+#endif
+
+	V = Vf(*pos0);
 
 	// Initialize velocities as gaussian on the components
 	printf("Init velocities\n");
@@ -95,11 +102,12 @@ int main(int argc, char const *argv[])
 	{
 		compute_acc_k((*acc0)[i], V_LJ, *pos0, m, i, L);
 		init_distribute_maxwell_boltzmann((*vel0)[i], vstd);
-		E_tot += 0.5 * m * (*vel0)[i].norm2();
+		T += 0.5 * m * (*vel0)[i].norm2();
 	}
+	E_tot = T + V;
 	printf("Initial energy: %f\n", E_tot);
 
-	energy_file << 0 << " " << 0 << " " << E_tot << "\n";
+	energy_file << 0 << " " << 0 << " " << T << " " << V << " " << E_tot << "\n";
 
 	// Velocity verlet
 	printf("Start velocity verlet\n");
@@ -113,17 +121,25 @@ int main(int argc, char const *argv[])
 		}
 		// Periodic conditions
 		apply_periodic_bounds(*pos1, L);
-		E_tot = V(*pos1);
+
+#ifdef SAVE_POS
+		save_positions(*pos0, pos_file);
+		pos_file << "\n\n";
+#endif
+
+		V = Vf(*pos1);
 		// Compute all new velocities
+		T = 0;
 		for (uint32_t j = 0; j < N; j++)
 		{
 			compute_acc_k((*acc1)[j], V_LJ, *pos1, m, j, L);
 			(*vel1)[j] = (*vel0)[j] + 0.5 * dt * ((*acc0)[j] + (*acc1)[j]);
-			E_tot += 0.5 * m * (*vel1)[j].norm2();
+			T += 0.5 * m * (*vel1)[j].norm2();
 		}
+		E_tot = T + V;
 
 		// TODO: write out pos1,vel1,energy
-		energy_file << i << " " << i * dt << " " << E_tot << "\n";
+		energy_file << i << " " << i * dt << " " << T << " " << V << " " << E_tot << "\n";
 		if ((i % 1000) == 0)
 		{
 			printf("Step: %7d \t Percentage: %3d \tEnergy: %f\n", i, (i * 100) / M, E_tot);
@@ -165,7 +181,7 @@ double V_LJ_1(const Vec3D &a, const Vec3D &b)
 	return 4 * (std::pow(1.0 / d2, 6) - std::pow(1.0 / d2, 3));
 }
 
-double V(const std::vector<Vec3D> &pos)
+double Vf(const std::vector<Vec3D> &pos)
 {
 	double res{0};
 	size_t N{pos.size()};
@@ -181,7 +197,7 @@ double V(const std::vector<Vec3D> &pos)
 }
 
 /* Calculate the vector of forces F
-  V the potential between two particles
+  Vij the potential between two particles
   pos the vector of positions
 */
 void calculate_F(
