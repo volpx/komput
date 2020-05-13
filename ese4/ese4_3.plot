@@ -46,13 +46,6 @@ set style line 7 \
     linetype 0 linewidth 2 \
     pointtype 1 pointsize 1.5
 
-splot "output_data/positions0.dat" using 2:3:4 with linespoints linestyle 8 \
- ,"output_data/positions1.dat" using 2:3:4 with linespoints linestyle 1 \
- ,"output_data/positions2.dat" using 2:3:4 with linespoints linestyle 2 \
- ,"output_data/positions3.dat" using 2:3:4 with linespoints linestyle 3 \
- ,"output_data/positions4.dat" using 2:3:4 with linespoints linestyle 4 \
- ,"output_data/positions5.dat" using 2:3:4 with linespoints linestyle 5 \
- ,"output_data/positions6.dat" using 2:3:4 with linespoints linestyle 6 \
- ,"output_data/positions7.dat" using 2:3:4 with linespoints linestyle 7
+splot "output_data/positions0.dat" using 2:3:4 with linespoints linestyle 8
 # write to file
 set output

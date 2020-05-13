@@ -7,6 +7,150 @@
 #include <cmath>
 #include <fstream>
 
+double V(const std::vector<Vec3D> &pos);
+double V_LJ(double x);
+void compute_acc_k(
+	Vec3D &acc,
+	const std::function<double(double)> Vr,
+	const std::vector<Vec3D> &pos,
+	double m,
+	size_t k,
+	double L);
+void save_positions(const std::vector<Vec3D> &pos, std::ofstream &f);
+
+int main(int argc, char const *argv[])
+{
+	uint32_t n = 5; // number of celles on side
+	uint32_t N = n * n * n;
+	uint32_t M = 1000000;
+
+	uint32_t Nfollow = 0; // Particle to follow
+
+	// Physics quantities
+	double e_r = 1.6e-19;					 // C
+	double kB_r = 1.38e-23;					 // J*K^-1
+	double T_r = 300;						 // K
+	double m_r = 2.2e-25;					 // Kg
+	double rho_r = 1e27;					 // #*m^-3
+	double dl_r = std::pow(rho_r, -1.0 / 3); // m
+	// double Time_r = 1e-12;						 // s
+	double dt_r = 1e-12 * 1e-4;					 // s
+	double vstd_r = std::sqrt(kB_r * T_r / m_r); // m*s^-1
+	double sigma_r = 3.94e-10;					 // m
+	double eps_r = 0.02 * e_r;					 // J
+
+	// Modifications
+	// dt_r /= 10;
+	// T_r = 10;
+
+	// Problem quantities
+	double dl{dl_r / sigma_r};									  // Cell length
+	double L{n * dl};											  // Box length
+	double dt{std::sqrt(eps_r / m_r / sigma_r / sigma_r) * dt_r}; // Time step
+	double rho{std::pow(sigma_r, 3) * rho_r};					  // Density
+	double m{rho * std::pow(dl, 3)};							  // Mass of the particles
+	double vstd{vstd_r * std::sqrt(m_r / eps_r)};				  // std velocity
+
+	// Print info data
+	printf("dl:\t%f\nL:\t%f\ndt:\t%f\nrho:\t%f\nm:\t%f\nvstd:\t%f\n", dl, L, dt, rho, m, vstd);
+
+	// Evolution variables
+	std::vector<Vec3D> pos_a(N);
+	std::vector<Vec3D> vel_a(N);
+	std::vector<Vec3D> acc_a(N);
+	std::vector<Vec3D> pos_b(N);
+	std::vector<Vec3D> vel_b(N);
+	std::vector<Vec3D> acc_b(N);
+
+	std::vector<Vec3D> *pos0 = &pos_a;
+	std::vector<Vec3D> *pos1 = &pos_b;
+	std::vector<Vec3D> *vel0 = &vel_a;
+	std::vector<Vec3D> *vel1 = &vel_b;
+	std::vector<Vec3D> *acc0 = &acc_a;
+	std::vector<Vec3D> *acc1 = &acc_b;
+	std::vector<Vec3D> *tmp;
+
+	double E_tot{0};
+
+	// Setup output
+	std::ofstream pos_file("output_data/positions.dat");
+	pos_file << "#n x y z\n";
+
+	// std::ofstream vel_file("output_data/velocities.dat");
+	std::ofstream energy_file("output_data/energy.dat");
+	energy_file << "#m t E\n";
+
+	printf("Start\n");
+
+	// Initialize with uniform lattice conditions
+	printf("Init lattice\n");
+	init_lattice(*pos0, dl, n, 1);
+	apply_periodic_bounds(*pos0, L);
+	pos_file << "\n\n";
+	E_tot = V(*pos0);
+
+	// Initialize velocities as gaussian on the components
+	printf("Init velocities\n");
+	for (uint32_t i = 0; i < N; i++)
+	{
+		compute_acc_k((*acc0)[i], V_LJ, *pos0, m, i, L);
+		init_distribute_maxwell_boltzmann((*vel0)[i], vstd);
+		E_tot += 0.5 * m * (*vel0)[i].norm2();
+	}
+	printf("Initial energy: %f\n", E_tot);
+
+	energy_file << 0 << " " << 0 << " " << E_tot << "\n";
+
+	// Velocity verlet
+	printf("Start velocity verlet\n");
+	for (uint32_t i = 1; i < M; i++)
+	{
+		// Velocity - Verlet
+		// Compute all new positions
+		for (uint32_t j = 0; j < N; j++)
+		{
+			(*pos1)[j] = (*pos0)[j] + dt * (*vel0)[j] + 0.5 * dt * dt * (*acc0)[j];
+		}
+		// Periodic conditions
+		apply_periodic_bounds(*pos1, L);
+		E_tot = V(*pos1);
+		// Compute all new velocities
+		for (uint32_t j = 0; j < N; j++)
+		{
+			compute_acc_k((*acc1)[j], V_LJ, *pos1, m, j, L);
+			(*vel1)[j] = (*vel0)[j] + 0.5 * dt * ((*acc0)[j] + (*acc1)[j]);
+			E_tot += 0.5 * m * (*vel1)[j].norm2();
+		}
+
+		// TODO: write out pos1,vel1,energy
+		energy_file << i << " " << i * dt << " " << E_tot << "\n";
+		if ((i % 1000) == 0)
+		{
+			printf("Step: %7d \t Percentage: %3d \tEnergy: %f\n", i, (i * 100) / M, E_tot);
+		}
+
+		// Swap pointers
+		tmp = pos1;
+		pos1 = pos0;
+		pos0 = tmp;
+
+		tmp = vel1;
+		vel1 = vel0;
+		vel0 = tmp;
+
+		tmp = acc1;
+		acc1 = acc0;
+		acc0 = tmp;
+	}
+
+	printf("Final energy: %f\n", E_tot);
+	printf("End\n");
+	// Pause
+	// getchar();
+
+	return 0;
+}
+
 double V_LJ(double x)
 {
 	if (x < 1e-10)
@@ -137,129 +281,6 @@ void save_positions(const std::vector<Vec3D> &pos, std::ofstream &f)
 	{
 		f << i << " " << pos[i].x << " " << pos[i].y << " " << pos[i].z << "\n";
 	}
-}
-
-int main(int argc, char const *argv[])
-{
-	uint32_t n = 5; // number of celles on side
-	uint32_t N = n * n * n;
-	uint32_t M = 2;
-	// M = 1;
-
-	// Physics quantities
-	double e_r = 1.6e-19;						 // C
-	double m_r = 2.2e-25;						 // Kg
-	double kB_r = 1.38e-23;						 // J*K^-1
-	double T_r = 300;							 // K
-	double rho_r = 1e27;						 // #*m^-3
-	double eps_r = 0.02 * e_r;					 // J
-	double sigma_r = 3.94e-10;					 // m
-	double dl_r = std::pow(rho_r, -1.0 / 3);	 // m
-	double dt_r = 1e-12;						 // s
-	double vstd_r = std::sqrt(kB_r * T_r / m_r); // m*s^-1
-
-	// Problem quantities
-	double dl{dl_r / sigma_r};									  // Cell length
-	double L{n * dl};											  // Box length
-	double dt{std::sqrt(eps_r / m_r / sigma_r / sigma_r) * dt_r}; // Time step
-	double rho{std::pow(sigma_r, 3) * rho_r};					  // Density
-	double m{rho * std::pow(dl, 3)};							  // Mass of the particles
-	double vstd{vstd_r * std::sqrt(m_r / eps_r)};				  // std velocity
-
-	// Print info data
-	printf("dl:\t%f\nL:\t%f\ndt:\t%f\nrho:\t%f\nm:\t%f\nvstd:\t%f\n", dl, L, dt, rho, m, vstd);
-
-	// Evolution variables
-	std::vector<Vec3D> pos_a(N);
-	std::vector<Vec3D> vel_a(N);
-	std::vector<Vec3D> acc_a(N);
-	std::vector<Vec3D> pos_b(N);
-	std::vector<Vec3D> vel_b(N);
-	std::vector<Vec3D> acc_b(N);
-
-	std::vector<Vec3D> *pos0 = &pos_a;
-	std::vector<Vec3D> *pos1 = &pos_b;
-	std::vector<Vec3D> *vel0 = &vel_a;
-	std::vector<Vec3D> *vel1 = &vel_b;
-	std::vector<Vec3D> *acc0 = &acc_a;
-	std::vector<Vec3D> *acc1 = &acc_b;
-	std::vector<Vec3D> *tmp;
-
-	double E_tot{0};
-
-	// Setup output
-	std::ofstream pos_file("output_data/positions.dat");
-	pos_file << "#n x y z\n";
-	std::ofstream vel_file("output_data/velocities.dat");
-	std::ofstream energy_file("output_data/energy.dat");
-	energy_file << "#t E\n";
-
-	printf("Start\n");
-
-	// Initialize with uniform lattice conditions
-	printf("Init lattice\n");
-	init_lattice(*pos0, dl, n, 1);
-	apply_periodic_bounds(*pos0, L);
-	pos_file << "\n\n";
-	E_tot = V(*pos0);
-
-	// Initialize velocities as gaussian on the components
-	printf("Init velocities\n");
-	for (uint32_t i = 0; i < N; i++)
-	{
-		compute_acc_k((*acc0)[i], V_LJ, *pos0, m, i, L);
-		init_distribute_maxwell_boltzmann((*vel0)[i], vstd);
-		E_tot += 0.5 * m * (*vel0)[i].norm2();
-	}
-	printf("Initial energy: %f\n", E_tot);
-
-	energy_file << 0 << " " << E_tot << "\n";
-
-	// Velocity verlet
-	printf("Start velocity verlet\n");
-	for (uint32_t i = 1; i < M; i++)
-	{
-		// Velocity - Verlet
-		// Compute all new positions
-		for (uint32_t j = 0; j < N; j++)
-		{
-			(*pos1)[j] = (*pos0)[j] + dt * (*vel0)[j] + 0.5 * dt * dt * (*acc0)[j];
-		}
-		save_positions(*pos0, pos_file);
-		// Periodic conditions
-		apply_periodic_bounds(*pos1, L);
-		E_tot = V(*pos1);
-		// Compute all new velocities
-		for (uint32_t j = 0; j < N; j++)
-		{
-			compute_acc_k((*acc1)[j], V_LJ, *pos1, m, j, L);
-			(*vel1)[j] = (*vel0)[j] + 0.5 * dt * ((*acc0)[j] + (*acc1)[j]);
-			E_tot += 0.5 * m * (*vel1)[j].norm2();
-		}
-
-		// TODO: write out pos1,vel1,energy
-		energy_file << i << " " << E_tot << "\n";
-
-		// Swap pointers
-		tmp = pos1;
-		pos1 = pos0;
-		pos0 = tmp;
-
-		tmp = vel1;
-		vel1 = vel0;
-		vel0 = tmp;
-
-		tmp = acc1;
-		acc1 = acc0;
-		acc0 = tmp;
-	}
-
-	printf("Final energy: %f\n", E_tot);
-	printf("End\n");
-	// Pause
-	// getchar();
-
-	return 0;
 }
 
 double V_LJ_diff(double x)
