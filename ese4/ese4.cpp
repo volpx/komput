@@ -9,21 +9,12 @@
 
 #define SAVE_POS
 
-double Vf(const std::vector<Vec3D> &pos, double L);
-double Vfmod(const std::vector<Vec3D> &pos, double L);
 double V_LJ(double x);
-void compute_acc_k(
-	Vec3D &acc,
-	const std::function<double(double)> Vr,
-	const std::vector<Vec3D> &pos,
-	double m,
-	size_t k,
-	double L);
 void save_positions(const std::vector<Vec3D> &pos, std::ofstream &f);
 // Compute the acceleration on particle i
 double compute_acc_return_V(
 	std::vector<Vec3D> &acc,
-	const std::function<double(double)> Vr,
+	const std::function<double(double)> &Vr,
 	const std::vector<Vec3D> &pos,
 	const double m,
 	const double L);
@@ -70,8 +61,8 @@ int main(int argc, char const *argv[])
 
 	// Modifications
 	// T_r = 10;
-	dt_r /= 1000;
-	M = 50000;
+	dt_r /= 100;
+	// M = 50000;
 	// rho_r *= 0.5 / 0.061163;
 	// m_r *= 1 / 8.17488;
 	// dt_r *= 0.01 / 0.875202;
@@ -175,7 +166,7 @@ int main(int argc, char const *argv[])
 		}
 		E_tot = T + V;
 
-		// TODO: write out pos1,vel1,energy
+		// Output
 #ifdef SAVE_POS
 		save_positions(*pos0, pos_file);
 		pos_file << "\n\n";
@@ -185,15 +176,6 @@ int main(int argc, char const *argv[])
 		{
 			printf("Step: %7d \t Percentage: %3d \tEnergy: %f\n", i, (i * 100) / M, E_tot);
 		}
-		// if (i == 30954 || i == 30955 || i == 30956)
-		// {
-		// 	// problem
-		// 	std::cout << i << " " << V << std::endl;
-		// 	Vfmod(*pos1, L);
-		// 	std::cout << (*pos1)[82].x << " " << (*pos1)[82].x / L << " " << L * std::floor((*pos1)[82].x / L) << std::endl;
-		// 	if (i == 30956)
-		// 		return 1;
-		// }
 
 		// Swap pointers
 		tmp = pos1;
@@ -219,8 +201,6 @@ int main(int argc, char const *argv[])
 
 double V_LJ(double x)
 {
-	// Clip x?
-	// x = (x < 1e-10) ? 1e-10 : x;
 	return 4 * (std::pow(1.0 / x, 12) - std::pow(1.0 / x, 6));
 }
 
@@ -230,8 +210,7 @@ double compute_acc_return_V(
 	const std::function<double(double)> &Vr,
 	const std::vector<Vec3D> &pos,
 	const double m,
-	const double L,
-	std::function<double(double)> *Vr_prime = NULL)
+	const double L)
 {
 	size_t N{pos.size()};
 	double d;
@@ -239,15 +218,13 @@ double compute_acc_return_V(
 	double Vreturn{0};
 	Vec3D alias;
 
-	// Reset the accelerations
 	for (size_t i{0}; i < N; i++)
 	{
 		acc[i].clear();
-	}
-	for (size_t i{0}; i < N; i++)
-	{
+		// Acceleration of i
 		for (size_t j{0}; j < N; j++)
 		{
+			// Skip the self case
 			if (i != j)
 			{
 				// Iterate on all possible alias of j
@@ -260,15 +237,9 @@ double compute_acc_return_V(
 					{
 						// Compute the derivative on function v around 0
 						// Compute the acc contribute for the pair ij
-						tmp_acc = -derive_5points(Vr, d, 1e-10) / m / d * (pos[i] - alias);
 						// add the contribute to the force using the difference versor
-						acc[i] += tmp_acc;
-						// Only in the real case
-						// if (a == 13)
-						// {
-						// 	// a==13 is the real case
-						// 	acc[j] -= tmp_acc;
-						// }
+						acc[i] += -derive_5points(Vr, d, 1e-10) / m / d * (pos[i] - alias);
+						// add potential on half of the cases
 						if (i < j)
 							Vreturn += Vr(d);
 					}
@@ -290,115 +261,7 @@ void save_positions(const std::vector<Vec3D> &pos, std::ofstream &f)
 }
 
 /* junk functions ****************************************************/
-// double V_LJ_1(const Vec3D &a, const Vec3D &b)
-// {
-// 	double d2 = (a - b).norm2();
-// 	return 4 * (std::pow(1.0 / d2, 6) - std::pow(1.0 / d2, 3));
-// }
-// /* Calculate the vector of forces F
-//   Vij the potential between two particles
-//   pos the vector of positions
-//   NOT USED!
-// */
-// void calculate_F(
-// 	std::vector<Vec3D> &F,
-// 	std::function<double(Vec3D, Vec3D)> Vij,
-// 	std::vector<Vec3D> &pos)
-// {
-// 	double der;
-// 	size_t N = F.size();
-// 	// Loop on every particle to calculate the force on each
-// 	for (size_t k{0}; k < N; k++)
-// 	{
-// 		// Start with 0 to add single contributes
-// 		F[k] = Vec3D{0, 0, 0};
-// 		// TODO: could this for be halved?
-// 		// Loop on all other particles
-// 		for (size_t i{0}; i < N; i++)
-// 		{
-// 			// Skip the self-case
-// 			if (i != k)
-// 			{
-// 				// x=r_ij-r_ij0 ==> dx=dr
-// 				// move the potential with the original position in the origin
-// 				// this way the derivative can be computed in 0 on variable x
-// 				// which directly varies the radial distance
-// 				auto v = [&](double x) -> double {
-// 					return V_LJ((pos[k] - pos[i]).norm() + x);
-// 				};
-// 				// Compute the derivative on function v around 0
-// 				der = derive_5points(v, 0, 1e-10);
-// 				// add the contribute to the force using the difference versor
-// 				F[k] += -der * (pos[k] - pos[i]).normalize();
-// 			}
-// 		}
-// 	}
-// }
 // double V_LJ_diff(double x)
 // {
 // 	return -4 * (12 / x * std::pow(1.0 / x, 12) - 6 / x * std::pow(1.0 / x, 6));
-// }
-
-// // Compute the potential of a particular configuration
-// double Vf(const std::vector<Vec3D> &pos, double L)
-// {
-// 	// TODO: i think there's still a problem
-// 	double res{0};
-// 	size_t N{pos.size()};
-// 	double d;
-// 	for (size_t i{0}; i < N - 1; i++)
-// 	{
-// 		for (size_t j{i + 1}; j < N; j++)
-// 		{
-// 			// Check  eventual alias
-// 			// The partile _can_ interact only one time as real or aliased
-// 			Vec3D alias = pos[j];
-
-// 			// Check interaction
-// 			if ((d = do_interact(pos[i], alias, L)) > 0)
-// 			{
-// 				res += V_LJ(d);
-// 			}
-// 			// else no interaction:
-// 			// the case of unperfect packing of spheres
-// 		}
-// 	}
-// 	return res;
-// }
-// double Vfmod(const std::vector<Vec3D> &pos, double L)
-// {
-// 	// TODO: i think there's still a problem
-// 	double res{0};
-// 	size_t N{pos.size()};
-// 	double d;
-// 	for (size_t i{0}; i < N - 1; i++)
-// 	{
-// 		for (size_t j{i + 1}; j < N; j++)
-// 		{
-// 			// Check  eventual alias
-// 			// The partile _can_ interact only one time as real or aliased
-// 			Vec3D alias = pos[j];
-
-// 			if (i == 52 && j == 82)
-// 			{
-// 				d = do_interact(pos[i], alias, L);
-// 				std::cout
-// 					<< "Me: " << i << " " << pos[i]
-// 					<< "\nother: " << j << " " << pos[j]
-// 					<< "\nalias: " << j << " " << alias
-// 					<< "\nd:" << d
-// 					<< "\nV: " << V_LJ(d)
-// 					<< std::endl;
-// 			}
-// 			alias = pos[j];
-// 			// Check interaction
-// 			if ((d = do_interact(pos[i], alias, L)) > 0)
-// 			{
-// 				res += V_LJ(d);
-// 			}
-// 			// else no interaction:
-// 			// the case of unperfect packing of spheres
-// 		}
-// 	}
-// 	return res;
 // }
