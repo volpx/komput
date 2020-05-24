@@ -1,45 +1,18 @@
 #ifndef __SIMULATION_H__
 #define __SIMULATION_H__
 
+#include "vec3d.h"
+#include "functions.h"
+#include "differentiate.h"
+#include "vector_help.h"
+
 #include <cstdint>
 #include <cmath>
 #include <vector>
-#include <cstdlib>
-
-//debug only
-#include <iostream>
-
-class Vec3D
-{
-public:
-	Vec3D(){};
-	Vec3D(double x, double y, double z);
-
-	double x;
-	double y;
-	double z;
-
-	double norm() const;
-	double norm2() const;
-
-	Vec3D &normalize();
-	Vec3D getNormalized() const;
-
-	Vec3D &clear();
-
-	Vec3D &operator+=(const Vec3D &a);
-	Vec3D &operator-=(const Vec3D &a);
-
-	friend Vec3D operator-(const Vec3D &a, const Vec3D &b);
-	friend Vec3D operator+(const Vec3D &a, const Vec3D &b);
-	friend Vec3D operator*(const Vec3D &a, const double k);
-	friend Vec3D operator*(const double k, const Vec3D &a);
-
-	friend std::ostream &operator<<(std::ostream &out, const Vec3D &vec);
-};
+#include <functional>
 
 /* Init the cubic lattice positions with:
- *  dl
+ *  L box width
  *  n cells along the side
  *  q particles for every cell
  *
@@ -51,14 +24,105 @@ public:
  */
 #define INIT_LATTICE_N_TOO_SMALL -3
 #define INIT_LATTICE_Q_NOT_SUPPORTED -4
-int init_lattice(std::vector<Vec3D> &pos, double L, uint32_t n = 1, uint32_t q = 1);
+int init_lattice(std::vector<Vec3D> &pos, double L = 1,
+				 uint32_t n = 1, uint32_t q = 1);
 
+// Give nomal distributed components to vector vec
 void init_distribute_maxwell_boltzmann(Vec3D &vec, double std = 1);
 
+// Velocity verlet
+// namespace VV
+// {
+void new_position(
+	std::vector<double> &pos1,
+	const std::vector<double> &pos0,
+	const std::vector<double> &vel0,
+	const std::vector<double> &acc0,
+	double dt, double L);
+double new_velocity(
+	std::vector<double> &vel1,
+	const std::vector<double> &vel0,
+	const std::vector<double> &acc0,
+	const std::vector<double> &acc1,
+	double dt);
+
+// Compute the new accelerations and return the potential energy
+double new_acceleration(
+	// Where to store the accelerations
+	std::vector<Vec3D> &acc,
+	// Positions of the particles
+	const std::vector<Vec3D> &pos,
+	// Potential of interaction
+	const std::function<double(double)> &Vr,
+	// Mass of single particle (all equal)
+	const double m,
+	// Box length
+	const double L,
+	// Optional derivative of the potential
+	const std::function<double(double)> &dVr_arg = nullptr);
+// } // namespace VV
+
+// Periodic conditions for box of length L
 void apply_periodic_bounds(std::vector<Vec3D> &pos, double L = 1);
-void apply_periodic_bounds_unitary(std::vector<Vec3D> &pos);
+
+// Compute the alias of other for interaction on me
+// in the condition of periodic boundaries of lenght L
+double compute_alias(const Vec3D &me, Vec3D &other, double L);
 
 // Useful instantiation
 extern const std::vector<Vec3D> aliaser;
+
+#define AUTCO_EARLY_DATA 1
+#define AUTCO_LATE_DATA 2
+// AutoCorr manages the calculation of autocorrelations
+class AutoCorr
+{
+public:
+	AutoCorr() = delete;
+	AutoCorr(const AutoCorr &) = delete;
+
+	// Instantiate a new auto-correlation:
+	// c_istart: starting index for correlation, after initial fluctuation
+	// c_istop: total length of the simulation
+	// c_length: correlation length
+	// Nq: number of particles
+	AutoCorr(
+		uint32_t c_istart,
+		uint32_t c_istop,
+		uint32_t c_length,
+		uint32_t Nq);
+
+	// Single addition of data to the correlation
+	// q: vector of new points
+	// i: "time" index of the simulation
+	int add_data(
+		const std::vector<Vec3D> &q,
+		uint32_t i);
+
+	// Overloading for final output of the data
+	double operator[](size_t i) const;
+
+	uint32_t get_means_number() const;
+
+private:
+	// Starting index for correlation, after initial fluctuation
+	const uint32_t c_istart;
+	// Total length of the simulation
+	const uint32_t c_istop;
+	// Correlation length
+	const uint32_t c_length;
+	// Number of particles
+	const uint32_t Nq;
+	// Final number of means that will be done on the correlation
+	// taking in account the
+	const uint32_t c_means_number;
+
+	// Actual correlation vector (the output)
+	std::vector<double> c;
+	// Storage for all the initial conditions step by step
+	std::vector<Vec3D> c_0;
+	// Quick save of also the RMS value fo the initial conditions
+	std::vector<double> c_02m;
+};
 
 #endif // __SIMULATION_H__
