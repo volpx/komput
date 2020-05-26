@@ -1,9 +1,12 @@
 # Komput
 
 Currently is all held up by the standard library and boost library but things could change.
-Good reference to undestand the code could be [Learn CPP](learncpp.com) and [CPP Reference](en.cppreference.com).
+Good reference to undestand the code could be [Learn CPP](https://www.learncpp.com) and [CPP Reference](https://en.cppreference.com/).
 
 ## Instructions
+
+**Lots of things have changed but should still be enough to just run make on the correct exercise.**
+
 To run the different main(s) should be enough to:
 
 ```bash
