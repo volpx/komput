@@ -33,7 +33,7 @@ int main(int argc, char const *argv[])
 	// Number of particles in the box
 	uint32_t N = n * n * n;
 	// Number of time steps
-	uint32_t M = 100000;
+	uint32_t M = 100'000;
 
 	// Physics dimensional quantities
 	double e_r = 1.6e-19;	   // C
@@ -44,7 +44,7 @@ int main(int argc, char const *argv[])
 	double sigma_r = 3.94e-10; // m
 	double dt_r = 1e-12;	   // s
 	double eps_r = 0.02 * e_r; // J
-	// rho_r *= 1 / 0.061163;
+// 	rho_r *= 1 / 0.061163;
 	double dl_r = std::pow(rho_r, -1.0 / 3);	 // m
 	double vstd_r = std::sqrt(kB_r * T_r / m_r); // m*s^-1
 
@@ -77,6 +77,12 @@ int main(int argc, char const *argv[])
 	std::cout
 		<< "\nM:\t" << M
 		<< "\nN:\t" << N
+		<< "\nKt:\t" << dt_r / dt
+		<< "\nKl:\t" << dl_r / dl
+		<< "\nKm:\t" << m_r / m
+		<< "\nKe:\t" << eps_r / 1
+		<< "\nKv:\t" << vstd_r / vstd
+		<< "\nKrho:\t" << rho_r / rho
 		<< "\nL:\t" << L
 		<< "\ndl:\t" << dl
 		<< "\nrho:\t" << rho
