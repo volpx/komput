@@ -9,6 +9,7 @@
 #include <boost/format.hpp>
 
 double randn();
+double randu();
 
 int number_of_significant_digits(double x, double corr);
 

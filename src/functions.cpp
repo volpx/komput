@@ -34,6 +34,12 @@ double randn()
 	}
 }
 
+double randu()
+{
+	constexpr double scale{1.0 / 32767};
+	return (rand() % 32767) * scale;
+}
+
 int number_of_significant_digits(double x, double corr)
 {
 	return (int)std::log10(x / corr);
