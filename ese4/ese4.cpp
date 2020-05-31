@@ -36,17 +36,17 @@ int main(int argc, char const *argv[])
 	uint32_t M = 100'000;
 
 	// Physics dimensional quantities
-	double e_r = 1.6e-19;	   // C
-	double kB_r = 1.38e-23;	   // J*K^-1
-	double T_r = 300;		   // K
-	double m_r = 2.2e-25;	   // Kg
-	double rho_r = 1e27;	   // #*m^-3
-	double sigma_r = 3.94e-10; // m
-	double dt_r = 1e-12;	   // s
-	double eps_r = 0.02 * e_r; // J
-// 	rho_r *= 1 / 0.061163;
-	double dl_r = std::pow(rho_r, -1.0 / 3);	 // m
-	double vstd_r = std::sqrt(kB_r * T_r / m_r); // m*s^-1
+	double e_r = 1.6e-19;							 // C
+	double kB_r = 1.38e-23;							 // J*K^-1
+	double T_r = 300;								 // K
+	double m_r = 2.2e-25;							 // Kg
+	double rho_r = 1e27;							 // #*m^-3
+	double sigma_r = 3.94e-10;						 // m
+	double dt_r = 1e-12;							 // s
+	double eps_r = 0.02 * e_r;						 // J
+													 // 	rho_r *= 1 / 0.061163;
+	double dl_r = std::pow(rho_r, -1.0 / 3);		 // m
+	double vstd_r = std::sqrt(2 * kB_r * T_r / m_r); // m*s^-1
 
 	// Modifications
 	dt_r /= 100;
