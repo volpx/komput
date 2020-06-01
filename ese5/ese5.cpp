@@ -134,6 +134,7 @@ int main(int argc, char const *argv[])
 	for (uint32_t v = 0; v < V.size(); v++)
 	{
 		L = std::pow(V[v], 1.0 / 3);
+		// Delta doesn't need to be constant
 		Delta = L / n / 200;
 
 		// Initial uniform position
@@ -170,7 +171,9 @@ int main(int argc, char const *argv[])
 
 				Vp0 = Vp1;
 			}
-			// else don't accept new configuration
+			// else don't accept the new configuration
+			// TODO: do i have to retry if I don't accept the new configuration?
+			//  otherwise i compute the piece below with the same data as before
 
 			// Pos0 is now the position to make stats
 
