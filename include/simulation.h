@@ -125,4 +125,8 @@ private:
 	std::vector<double> c_02m;
 };
 
+double mean(const std::vector<double> &x);
+void autocorrelation(std::vector<double> &corr,
+					 const std::vector<double> &x);
+
 #endif // __SIMULATION_H__

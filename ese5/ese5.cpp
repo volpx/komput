@@ -1,4 +1,3 @@
-
 #include "simulation.h"
 #include "differentiate.h"
 #include "functions.h"
@@ -10,6 +9,7 @@
 #include <cmath>
 #include <fstream>
 #include <string.h>
+#include <random>
 
 // Interaction potential
 double V_LJ(double x)
@@ -57,6 +57,36 @@ double Vtot(
 	return Vreturn;
 }
 
+void interact_2particles(
+	const std::vector<Vec3D> &pos,
+	const std::function<void(uint32_t, uint32_t, double, Vec3D &)> &int2,
+	const double L)
+{
+	Vec3D alias;
+	double d;
+	const uint32_t N{static_cast<uint32_t>(pos.size())};
+
+	// Calculate the quantity wanted
+	for (uint32_t i{0}; i < N; i++)
+	{
+		for (uint32_t j{0}; j < N; j++)
+		{
+			if (j != i)
+			{
+				// Copy the particle j
+				alias = pos[j];
+				// Check if there is interaction
+				// and also compute the correct alias
+				if ((d = compute_alias(pos[i], alias, L)) > 0)
+				{
+					// They do interact
+					int2(i, j, d, alias);
+				}
+			}
+		}
+	}
+}
+
 int main(int argc, char const *argv[])
 {
 	// Number of cells on side
@@ -64,53 +94,70 @@ int main(int argc, char const *argv[])
 	// Number of particles in the box
 	constexpr uint32_t N = n * n * n;
 	// Number of evo steps
-	constexpr uint32_t M = 100;
+	constexpr uint32_t M = 10000;
 	// Number of volumes
-	constexpr uint32_t Nv = 10;
+	constexpr uint32_t Nrho = 10;
 
 	// Physics dimensional quantities
-	constexpr double e_r = 1.6e-19;	  // C
+	// Univ constants
 	constexpr double kB_r = 1.38e-23; // J*K^-1
-	constexpr double T_r = 119.76;	  // K
+	// Problem constants
+	constexpr double T_r = 119.76;								   // K
+	constexpr double sigma_r = 3.405e-10;						   // m
+	constexpr double eps_r = kB_r * T_r;						   // J
+	constexpr double rhom_r = 0.001 / sigma_r / sigma_r / sigma_r; // #m^-3
+	constexpr double rhoM_r = 1.2 / sigma_r / sigma_r / sigma_r;   // #m^-3
 
-	constexpr double sigma_r = 3.405e-10; // m
-	constexpr double eps_r = kB_r * T_r;  // J
-
-	constexpr double rho_star_r = 1.2;
-	constexpr double rho_r = rho_star_r / (sigma_r * sigma_r * sigma_r);
+	/* Conversion
+	*	Kl=sigma_r
+	*	Krho=sigma_r^-3
+	*	Ke=eps_r
+	*	KT=T_r
+	*	KF=Ke/Kl
+	*	KP=KF/Kl^2
+	*/
 
 	// Problem adimensional quantities
-	constexpr double Temp{kB_r / eps_r * T_r}; // Temperature
-	constexpr double beta{1 / (kB_r * T_r) * eps_r};
-	constexpr double rho{rho_star_r};
+	constexpr double T{1}; // Temperature
+	constexpr double beta{1};
+	constexpr double rhom{0.5};
+	constexpr double rhoM{1.2};
 
-	constexpr double V0{N / rho};
+	// Indexes sections
+	constexpr uint32_t i_thermalization = 1000;
+	constexpr uint32_t i_simulation = M - i_thermalization;
+	constexpr uint32_t i_correlation_start = 1000;
+	constexpr uint32_t i_correlation_length = 150;
+	constexpr uint32_t i_correlation_corrW0_length = M - i_correlation_start;
+	constexpr uint32_t i_Delta_correction_means = 10;
+	constexpr uint32_t i_Delta_correction_start = 100;
+	constexpr uint32_t i_Delta_correction_stop = 1000;
 
 	// Print info data
 	std::cout
-		<< "\nM:\t" << M
-		<< "\nN:\t" << N
-		// << "\nKrho:\t" << rho_r / rho
-		// << "\nKl:\t" << dl_r / dl
-		// << "\nKm:\t" << m_r / m
-		<< "\nKe:\t" << eps_r / 1
-		<< "\nT:\t" << Temp
-		<< "\nM:\t" << M
-		// << "\nV_LJ(L/2):\t" << V_LJ(L / 2)
+		<< "M:\t" << M << '\n'
+		<< "N:\t" << N << '\n'
+		<< "T:\t" << T << '\n'
+		<< "KP:" << eps_r / sigma_r / sigma_r / sigma_r << "Pa" << '\n'
+		<< "KV:" << sigma_r * sigma_r * sigma_r << "m^3" << '\n'
 		<< std::endl;
 
+	// Used in the algorithm
+	double rho;
+	std::cout << "Rho: ";
+	std::cin >> rho;
+	double V;
 	double Delta;
 	double L;
 	double A;
 	double nu;
-	double Prob;
-	double sum, sum2;
 	double Vp0, Vp1;
-	double d;
+	double W, W2, DW;
 	double F;
-	double P;
-	bool cond;
+	double d;
+	double P, stdP;
 	Vec3D alias;
+	std::vector<double> As(i_Delta_correction_means);
 
 	std::vector<Vec3D> pos_a(N);
 	std::vector<Vec3D> pos_b(N);
@@ -119,23 +166,61 @@ int main(int argc, char const *argv[])
 	std::vector<Vec3D> *pos1 = &pos_b;
 	std::vector<Vec3D> *tmp;
 
-	std::vector<double> V(Nv);
-	// linspace(V, 0.01, 1.2);
-	// V[0] = V0;
-	auto fill_V_i = [&V0, &Nv](uint32_t i) -> double {
-		return V0 * std::pow(1.5, (static_cast<double>(i) - Nv / 2) * 2 / Nv);
+	// Initialize the rho for which i want the P
+	// std::vector<double> rho(Nrho);
+	// for (uint32_t i; i < Nrho; i++)
+	// {
+	// 	rho[i] = rhom * std::exp(std::log(rhoM / rhom) * i / (Nrho - 1));
+	// 	// rho[i] = rhom + (rhoM / rhom) * i / (Nrho - 1);
+	// }
+
+	// Istantiate the random generator
+	// std::random_device rd;
+	// std::mt19937 gen(6789);
+	// std::uniform_real_distribution<double> dis(0.0, 1.0);
+	// const auto randu = [&gen, &dis]() -> double {
+	const auto randu = []() -> double {
+		constexpr double normalization =
+			1. / (static_cast<double>(RAND_MAX) + 1);
+		return rand() * normalization;
+		// return dis(gen);
 	};
-	map(V, fill_V_i);
+
+	// Autocorr virial
+	std::vector<double> corrW(i_correlation_length);
+	fill(corrW, 0);
+	std::vector<double> corrW0(i_correlation_corrW0_length);
+	fill(corrW0, 0);
 
 	std::ofstream PV_file("output_data/PV.dat");
-	PV_file << "#P V\n";
+	PV_file << "#V P std[P] rho W DW Delta tau\n";
+
+	std::ofstream cW_file("output_data/cVV.dat");
+	cW_file << "# i F\n";
 
 	std::cout << "Start" << std::endl;
-	for (uint32_t v = 0; v < V.size(); v++)
+
+	V = N / rho;
+	// V = N / 0.1;
+	L = std::pow(V, 1.0 / 3);
+
+	// Now start sampling P given V
+	// really we only want the quantity W which is part of P
+
+	std::cout << n << "\tVol:" << V << std::endl;
+	// Delta doesn't need to be constant
+	// Ideal value is given by the fraction of accepted states
+	// that should be 30-70%
+	// I try Delta, compute tau of correlation
+	// and then vary the Delta to find tau minimum
+	// D small -> p=1
+	// D big -> p=0
+	std::vector<double> del(10);
+	linspace(del, 2 * L / n / 23, 2 * L / n / 26);
+	for (uint32_t de = 0; de < del.size(); de++)
 	{
-		L = std::pow(V[v], 1.0 / 3);
-		// Delta doesn't need to be constant
-		Delta = L / n / 200;
+		Delta = del[de];
+		std::cout << "de:" << de << " Delta: " << Delta << std::endl;
 
 		// Initial uniform position
 		init_lattice(*pos0, L, n, 1);
@@ -143,9 +228,17 @@ int main(int argc, char const *argv[])
 
 		Vp0 = Vtot(*pos0, V_LJ, L);
 
-		sum2 = sum = 0;
+		// null the W to start adding the samples and later take the mean
+		W = W2 = 0;
+
+		// TODO: watch for equilibrium
+		// Metropolis algorithm for generation of new samples of my system
 		for (uint32_t i = 0; i < M; i++)
 		{
+			if (i % 1000 == 0)
+			{
+				std::cout << "Progress: " << i * 100 / M << std::endl;
+			}
 			// New state
 			for (uint32_t j = 0; j < N; j++)
 			{
@@ -156,13 +249,33 @@ int main(int argc, char const *argv[])
 			apply_periodic_bounds(*pos1, L);
 
 			Vp1 = Vtot(*pos1, V_LJ, L);
+			// A = std::exp(-beta * Vp1)/std::exp(-beta * Vp0);
 			A = std::exp(-beta * (Vp1 - Vp0));
-			Prob = std::min(1.0, A);
+			// Not tecnically needed
+			A = std::min(1.0, A);
+
+			// Adjust Delta value
+			// 0.5 is the target
+			// TODO: do this but after a like 100 element mean
+			As[i % i_Delta_correction_means] = A;
+			if (i >= i_Delta_correction_start &&
+				i < i_Delta_correction_stop &&
+				i % i_Delta_correction_means == 0)
+			{
+				double mean_As = mean(As);
+				Delta *= 1 + 0.01 * (mean_As - 0.3);
+				std::cout << "Mean prob:\t" << mean_As << "\n";
+			}
+			else if (i == i_Delta_correction_stop)
+			{
+				std::cout << "Simulation Delta:" << Delta
+						  << " A mean: " << mean(As)
+						  << std::endl;
+			}
 
 			// Decide if accept the new values
 			nu = randu();
-			std::cout << "Probability:\t" << Prob << "\tNu:\t" << nu << "\n";
-			if (nu < Prob)
+			if (nu < A)
 			{
 				// accept the new configuration
 				tmp = pos0;
@@ -171,43 +284,78 @@ int main(int argc, char const *argv[])
 
 				Vp0 = Vp1;
 			}
-			// else don't accept the new configuration
-			// TODO: do i have to retry if I don't accept the new configuration?
-			//  otherwise i compute the piece below with the same data as before
+			// else the new sample is the same as before
 
-			// Pos0 is now the position to make stats
+			// *pos0 is now the new sample to calculate the observables on
 
-			// Calculate the quantity wanted
-			for (uint32_t ii{0}; ii < N; ii++)
+			// Calculate the observables wanted
+			if (i >= i_thermalization)
 			{
-				for (uint32_t kk{0}; kk < N; kk++)
+				for (uint32_t ii{0}; ii < N; ii++)
 				{
-					if (kk != ii)
+					for (uint32_t jj{0}; jj < N; jj++)
 					{
-						// Copy the particle j
-						alias = (*pos0)[kk];
-						// Check if there is interaction
-						// and also compute the correct alias
-						if ((d = compute_alias((*pos0)[ii], alias, L)) > 0)
+						if (jj != ii)
 						{
-							// add potential
-							F = 0.5 * dV_LJ(d) * d;
-							sum += F;
-							sum2 += F * F;
+							// Copy the particle j
+							alias = (*pos0)[jj];
+							// Check if there is interaction
+							// and also compute the correct alias
+							if ((d = compute_alias((*pos0)[ii], alias, L)) > 0)
+							{
+								// They do interact
+								// TOCHECK
+								F = 0.5 * dV_LJ(d) * d;
+								W += F;
+								W2 += F * F;
+
+								// Correlations on F
+								if (i >= i_correlation_start)
+								{
+									corrW0[i - i_correlation_start] = F;
+								}
+							}
 						}
 					}
 				}
 			}
 		}
-		//std::cout << "Progress:" << v * 100 / V.size() << std::endl;
-		sum /= M;
-		sum2 /= M;
-		P = N / V[v] - 1.0 / 3 / V[v] * sum;
 
-		PV_file << P << " " << V[v] << "\n";
-	}
+		// Compute the correlation
+		autocorrelation(corrW, corrW0);
 
+		// Save cVV
+		cW_file << "\"Delta: " << del[de] << "\"\n";
+		for (uint32_t i = 0; i < i_correlation_length; i++)
+		{
+			cW_file << i << ' ' << corrW[i] << '\n';
+		}
+		cW_file << "\n\n";
+
+		// Do the mean
+		W /= i_simulation;
+		W2 /= i_simulation;
+		// TODO: Autocorrelations -> 1:25:00
+		DW = 25 * 1.0 / (i_simulation - 1) * std::fabs(W2 - W * W);
+
+		// Compute the sample of P at volume V
+		// not necessary to have fabs but avoids nans
+		P = N / V - 1.0 / 3 / V * W;
+		stdP = std::sqrt(std::pow(1.0 / 3 / V, 2) * DW);
+		// Write the new obtained P
+		PV_file << V << ' '
+				<< P << ' '
+				<< stdP << ' '
+				<< rho << ' '
+				<< W << ' '
+				<< DW << ' '
+				<< Delta << ' '
+				<< "\n";
+
+	} //den
+	cW_file.close();
 	PV_file.close();
+
 	std::cout << "End" << std::endl;
 	return 0;
 }

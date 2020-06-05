@@ -64,6 +64,8 @@ endif
 # Rules
 ese5: $(OBJS) $(OBJ_DIR)/ese5.o
 	$(CPP) -o $@ $^ $(CPP_FLAGS) $(L_FLAGS)
+ese5_PV: $(OBJS) $(OBJ_DIR)/ese5_PV.o
+	$(CPP) -o $@ $^ $(CPP_FLAGS) $(L_FLAGS)
 
 # Mains rules
 $(OBJ_DIR)/%.o: %.cpp
