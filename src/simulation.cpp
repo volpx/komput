@@ -325,15 +325,6 @@ uint32_t AutoCorr::get_means_number() const
 	return c_means_number;
 }
 
-double mean(const std::vector<double> &x)
-{
-	double r = 0;
-	for (double v : x)
-	{
-		r += v;
-	}
-	return r / x.size();
-}
 void autocorrelation(std::vector<double> &corr,
 					 const std::vector<double> &x)
 {
