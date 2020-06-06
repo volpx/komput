@@ -94,7 +94,7 @@ int main(int argc, char const *argv[])
 	// Number of particles in the box
 	constexpr uint32_t N = n * n * n;
 	// Number of evo steps
-	constexpr uint32_t M = 10000;
+	constexpr uint32_t M = 20000;
 	// Number of volumes
 	constexpr uint32_t Nrho = 10;
 

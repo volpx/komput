@@ -66,6 +66,10 @@ ese5: $(OBJS) $(OBJ_DIR)/ese5.o
 	$(CPP) -o $@ $^ $(CPP_FLAGS) $(L_FLAGS)
 ese5_PV: $(OBJS) $(OBJ_DIR)/ese5_PV.o
 	$(CPP) -o $@ $^ $(CPP_FLAGS) $(L_FLAGS)
+ese5_Cv: $(OBJS) $(OBJ_DIR)/ese5_Cv.o
+	$(CPP) -o $@ $^ $(CPP_FLAGS) $(L_FLAGS)
+ese5_compCv: $(OBJS) $(OBJ_DIR)/ese5_compCv.o
+	$(CPP) -o $@ $^ $(CPP_FLAGS) $(L_FLAGS)
 
 # Mains rules
 $(OBJ_DIR)/%.o: %.cpp

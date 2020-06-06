@@ -151,7 +151,7 @@ int main(int argc, char const *argv[])
 	double A;
 	double nu;
 	double Vp0, Vp1;
-	double W, W2, DW;
+	double Vsum, Vsum2, DV, Vsum4, DV2;
 	double F;
 	double d;
 	double P, stdP;
@@ -191,9 +191,6 @@ int main(int argc, char const *argv[])
 	std::vector<double> corrW0(i_correlation_corrW0_length);
 	fill(corrW0, 0);
 
-	std::ofstream PV_file("output_data/PV.dat");
-	PV_file << "#V P std[P] rho W DW Delta\n";
-
 	std::ofstream cW_file("output_data/cVV.dat");
 	cW_file << "# i F\n";
 
@@ -215,8 +212,8 @@ int main(int argc, char const *argv[])
 	// D small -> p=1
 	// D big -> p=0
 	std::vector<double> del(5);
-	// linspace(del, 2 * L / n / 23, 2 * L / n / 26);
-	linspace(del, 2 * L / n / 100, 2 * L / n / 300);
+	linspace(del, 2 * L / n / 50, 2 * L / n / 100);
+	// linspace(del, 2 * L / n / 100, 2 * L / n / 300);
 	for (uint32_t de = 0; de < del.size(); de++)
 	{
 		Delta = del[de];
@@ -229,7 +226,7 @@ int main(int argc, char const *argv[])
 		Vp0 = Vtot(*pos0, V_LJ, L);
 
 		// null the W to start adding the samples and later take the mean
-		W = W2 = 0;
+		Vsum = Vsum2 = Vsum4 = 0;
 
 		// TODO: watch for equilibrium
 		// Metropolis algorithm for generation of new samples of my system
@@ -263,7 +260,7 @@ int main(int argc, char const *argv[])
 				i % i_Delta_correction_means == 0)
 			{
 				double mean_As = mean(As);
-				Delta *= 1 + 0.01 * (mean_As - 0.3);
+				Delta *= 1 + 0.01 * (mean_As - 0.4);
 				std::cout << "Mean prob:\t" << mean_As << "\n";
 			}
 			else if (i == i_Delta_correction_stop)
@@ -291,32 +288,14 @@ int main(int argc, char const *argv[])
 			// Calculate the observables wanted
 			if (i >= i_thermalization)
 			{
-				for (uint32_t ii{0}; ii < N; ii++)
-				{
-					for (uint32_t jj{0}; jj < N; jj++)
-					{
-						if (jj != ii)
-						{
-							// Copy the particle j
-							alias = (*pos0)[jj];
-							// Check if there is interaction
-							// and also compute the correct alias
-							if ((d = compute_alias((*pos0)[ii], alias, L)) > 0)
-							{
-								// They do interact
-								// TOCHECK
-								F = 0.5 * dV_LJ(d) * d;
-								W += F;
-								W2 += F * F;
+				Vsum += Vp0;
+				Vsum2 += Vp0 * Vp0;
+				Vsum4 += Vp0 * Vp0 * Vp0 * Vp0;
 
-								// Correlations on F
-								if (i >= i_correlation_start)
-								{
-									corrW0[i - i_correlation_start] = F;
-								}
-							}
-						}
-					}
+				// Correlations on F
+				if (i >= i_correlation_start)
+				{
+					corrW0[i - i_correlation_start] = Vp0;
 				}
 			}
 		}
@@ -332,30 +311,10 @@ int main(int argc, char const *argv[])
 		}
 		cW_file << "\n\n";
 
-		// Do the mean
-		W /= i_simulation;
-		W2 /= i_simulation;
-		// TODO: Autocorrelations -> 1:25:00
-		DW = 25 * 1.0 / (i_simulation - 1) * std::fabs(W2 - W * W);
-
-		// Compute the sample of P at volume V
-		// not necessary to have fabs but avoids nans
-		P = N / V - 1.0 / 3 / V * W;
-		stdP = std::sqrt(std::pow(1.0 / 3 / V, 2) * DW);
-		// Write the new obtained P
-		PV_file << V << ' '
-				<< P << ' '
-				<< stdP << ' '
-				<< rho << ' '
-				<< W << ' '
-				<< DW << ' '
-				<< Delta << ' '
-				<< "\n";
-
 	} //den
 	cW_file.close();
-	PV_file.close();
 
+	std::cout << "Rho: " << rho << std::endl;
 	std::cout << "End" << std::endl;
 	return 0;
 }
