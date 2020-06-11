@@ -57,36 +57,6 @@ double Vtot(
 	return Vreturn;
 }
 
-void interact_2particles(
-	const std::vector<Vec3D> &pos,
-	const std::function<void(uint32_t, uint32_t, double, Vec3D &)> &int2,
-	const double L)
-{
-	Vec3D alias;
-	double d;
-	const uint32_t N{static_cast<uint32_t>(pos.size())};
-
-	// Calculate the quantity wanted
-	for (uint32_t i{0}; i < N; i++)
-	{
-		for (uint32_t j{0}; j < N; j++)
-		{
-			if (j != i)
-			{
-				// Copy the particle j
-				alias = pos[j];
-				// Check if there is interaction
-				// and also compute the correct alias
-				if ((d = compute_alias(pos[i], alias, L)) > 0)
-				{
-					// They do interact
-					int2(i, j, d, alias);
-				}
-			}
-		}
-	}
-}
-
 int main(int argc, char const *argv[])
 {
 	// Number of cells on side
@@ -95,15 +65,20 @@ int main(int argc, char const *argv[])
 	constexpr uint32_t N = n * n * n;
 	// Number of evo steps
 	constexpr uint32_t M = 20000;
-	// Number of volumes
-	constexpr uint32_t Nrho = 10;
 	// Indexes sections
+	// How much to wait for thermalization from the initial regular lattice
 	constexpr uint32_t i_thermalization = 2000;
+	// Length of simulation
 	constexpr uint32_t i_simulation = M - i_thermalization;
+	// When to start compute the correlations
 	constexpr uint32_t i_correlation_start = i_thermalization;
+	// Total length of the correlation
 	constexpr uint32_t i_correlation_length = 1500;
+	// Length of the array that saves the data points
 	constexpr uint32_t i_correlation_corrW0_length = M - i_correlation_start;
+	// How many means to take prior to apply a correcton to Delta
 	constexpr uint32_t i_Delta_correction_means = 100;
+	// Start and stop of the period of corrections
 	constexpr uint32_t i_Delta_correction_start = i_Delta_correction_means;
 	constexpr uint32_t i_Delta_correction_stop = i_thermalization;
 
@@ -129,8 +104,6 @@ int main(int argc, char const *argv[])
 	// Problem adimensional quantities
 	constexpr double T{1}; // Temperature
 	constexpr double beta{1};
-	constexpr double rhom{0.5};
-	constexpr double rhoM{1.2};
 
 	// Print info data
 	std::cout
@@ -142,6 +115,7 @@ int main(int argc, char const *argv[])
 		<< std::endl;
 
 	// Used in the algorithm
+	// Read the rho
 	double rho;
 	std::cout << "Rho: ";
 	std::cin >> rho;
@@ -158,6 +132,7 @@ int main(int argc, char const *argv[])
 	Vec3D alias;
 	std::vector<double> As(i_Delta_correction_means);
 
+	// Positions statuses
 	std::vector<Vec3D> pos_a(N);
 	std::vector<Vec3D> pos_b(N);
 
@@ -185,33 +160,36 @@ int main(int argc, char const *argv[])
 		// return dis(gen);
 	};
 
-	// Autocorr virial
+	// Autocorrelation on virial
 	std::vector<double> corrW(i_correlation_length);
 	fill(corrW, 0);
 	std::vector<double> corrW0(i_correlation_corrW0_length);
 	fill(corrW0, 0);
 
+	// Setup output file
 	std::ofstream PV_file("output_data/PV.dat");
 	PV_file << "#V P std[P] rho W DW Delta\n";
 
+	// Save the correlations results
 	std::ofstream cW_file("output_data/cVV.dat");
 	cW_file << "# i F\n";
 
 	std::cout << "Start" << std::endl;
 
+	// Volume of the box
 	V = N / rho;
-	// V = N / 0.1;
+	// Side length
 	L = std::pow(V, 1.0 / 3);
 
 	// Now start sampling P given V
-	// really we only want the quantity W which is part of P
+	// really we only want the quantity W which is needed for P
 
 	std::cout << n << "\tVol:" << V << std::endl;
 	// Delta doesn't need to be constant
 	// Ideal value is given by the fraction of accepted states
 	// that should be 30-70%
-	// I try Delta, compute tau of correlation
-	// and then vary the Delta to find tau minimum
+	// I try a bounch of Delta, compute tau of correlation
+	// and then use the Delta with tau minimum
 	// D small -> p=1
 	// D big -> p=0
 	std::vector<double> del(5);
@@ -226,6 +204,7 @@ int main(int argc, char const *argv[])
 		init_lattice(*pos0, L, n, 1);
 		apply_periodic_bounds(*pos0, L);
 
+		// Get the corresponding potential
 		Vp0 = Vtot(*pos0, V_LJ, L);
 
 		// null the W to start adding the samples and later take the mean
@@ -235,6 +214,7 @@ int main(int argc, char const *argv[])
 		// Metropolis algorithm for generation of new samples of my system
 		for (uint32_t i = 0; i < M; i++)
 		{
+			// Output some information on progress
 			if (i % 1000 == 0)
 			{
 				std::cout << "Progress: " << i * 100 / M << std::endl;
@@ -248,6 +228,7 @@ int main(int argc, char const *argv[])
 			}
 			apply_periodic_bounds(*pos1, L);
 
+			// Compute this potential
 			Vp1 = Vtot(*pos1, V_LJ, L);
 			// A = std::exp(-beta * Vp1)/std::exp(-beta * Vp0);
 			A = std::exp(-beta * (Vp1 - Vp0));
@@ -255,25 +236,28 @@ int main(int argc, char const *argv[])
 			A = std::min(1.0, A);
 
 			// Adjust Delta value
-			// 0.5 is the target
-			// TODO: do this but after a like 100 element mean
+			// A=0.5 is the target
+			// Save the value cyclic-ally
 			As[i % i_Delta_correction_means] = A;
+			// Check if in Correction of Delta window
 			if (i >= i_Delta_correction_start &&
 				i < i_Delta_correction_stop &&
 				i % i_Delta_correction_means == 0)
 			{
 				double mean_As = mean(As);
+				// Apply correction given the mean of A on the last elements
 				Delta *= 1 + 0.01 * (mean_As - 0.3);
 				std::cout << "Mean prob:\t" << mean_As << "\n";
 			}
 			else if (i == i_Delta_correction_stop)
 			{
+				// The resulting Delta after the corrections
 				std::cout << "Simulation Delta:" << Delta
 						  << " A mean: " << mean(As)
 						  << std::endl;
 			}
 
-			// Decide if accept the new values
+			// Decide if accept the new status
 			nu = randu();
 			if (nu < A)
 			{
@@ -288,7 +272,7 @@ int main(int argc, char const *argv[])
 
 			// *pos0 is now the new sample to calculate the observables on
 
-			// Calculate the observables wanted
+			// Calculate the observables wanted only after thermalization
 			if (i >= i_thermalization)
 			{
 				for (uint32_t ii{0}; ii < N; ii++)
@@ -304,12 +288,11 @@ int main(int argc, char const *argv[])
 							if ((d = compute_alias((*pos0)[ii], alias, L)) > 0)
 							{
 								// They do interact
-								// TOCHECK
 								F = 0.5 * dV_LJ(d) * d;
 								W += F;
 								W2 += F * F;
 
-								// Correlations on F
+								// Save for correlations on F
 								if (i >= i_correlation_start)
 								{
 									corrW0[i - i_correlation_start] = F;
@@ -324,7 +307,7 @@ int main(int argc, char const *argv[])
 		// Compute the correlation
 		autocorrelation(corrW, corrW0);
 
-		// Save cVV
+		// Save correlation for plot and finding tau
 		cW_file << "\"Delta: " << Delta << "\"\n";
 		for (uint32_t i = 0; i < i_correlation_length; i++)
 		{
@@ -335,11 +318,10 @@ int main(int argc, char const *argv[])
 		// Do the mean
 		W /= i_simulation;
 		W2 /= i_simulation;
-		// TODO: Autocorrelations -> 1:25:00
+		// Not ok but leave it here
 		DW = 25 * 1.0 / (i_simulation - 1) * std::fabs(W2 - W * W);
 
 		// Compute the sample of P at volume V
-		// not necessary to have fabs but avoids nans
 		P = N / V - 1.0 / 3 / V * W;
 		stdP = std::sqrt(std::pow(1.0 / 3 / V, 2) * DW);
 		// Write the new obtained P

@@ -6,7 +6,7 @@ set ylabel "Cv"
 set xlabel "rho"
 # set logscale x
 set grid
-# set yrange [100:300]
+# set yrange [0:0.28]
 set xrange [:0.2]
 
 set errorbars  linecolor "#0000ff"

@@ -156,7 +156,7 @@ int main(int argc, char const *argv[])
 	double A;
 	double nu;
 	double Vp0, Vp1;
-	double Vsum, Vsum2, DV, Vsum4, DV2;
+	double Vsum, Vsum2, DV, Vsum4, DV2, Vsumcov, DVcov;
 	double F;
 	double d;
 	double Cv, stdCv;
@@ -196,12 +196,6 @@ int main(int argc, char const *argv[])
 	std::vector<double> corrW0(i_correlation_corrW0_length);
 	fill(corrW0, 0);
 
-	std::ofstream Cv_file("output_data/Cv_total.dat", std::ofstream::out | std::ofstream::app);
-	// PV_file << "#V P std[P] rho W DW Delta\n";
-
-	std::ofstream cV_file("output_data/cVV.dat");
-	cV_file << "# i F\n";
-
 	std::cout << "Start" << std::endl;
 
 	V = N / rho;
@@ -227,7 +221,7 @@ int main(int argc, char const *argv[])
 	Vp0 = Vtot(*pos0, V_LJ, L);
 
 	// null the W to start adding the samples and later take the mean
-	Vsum = Vsum2 = Vsum4 = 0;
+	Vsumcov = Vsum = Vsum2 = Vsum4 = 0;
 
 	// TODO: watch for equilibrium
 	// Metropolis algorithm for generation of new samples of my system
@@ -275,6 +269,7 @@ int main(int argc, char const *argv[])
 		Vsum += Vp0;
 		Vsum2 += Vp0 * Vp0;
 		Vsum4 += Vp0 * Vp0 * Vp0 * Vp0;
+		Vsumcov += Vp0 * Vp0 * Vp0;
 
 		// Correlations on F
 		if (i >= i_correlation_start)
@@ -287,6 +282,8 @@ int main(int argc, char const *argv[])
 	autocorrelation(corrW, corrW0);
 
 	// Save cVV
+	std::ofstream cV_file("output_data/cVV.dat");
+	cV_file << "# i F\n";
 	cV_file << "\"Delta: " << Delta << "\"\n";
 	for (uint32_t i = 0; i < i_correlation_length; i++)
 	{
@@ -297,18 +294,27 @@ int main(int argc, char const *argv[])
 	// Do the mean
 	Vsum /= i_simulation;
 	Vsum2 /= i_simulation;
+	Vsum4 /= i_simulation;
+	Vsumcov /= i_simulation;
 	// TODO: Autocorrelations -> 1:25:00
 	DV = tau * 1.0 / (i_simulation - 1) * std::fabs(Vsum2 - Vsum * Vsum);
 
 	// Vsum2
-	Vsum4 /= i_simulation;
 	DV2 = tau * 1.0 / (i_simulation - 1) * std::fabs(Vsum4 - Vsum2 * Vsum2);
+
+	// Covariance
+	DVcov = tau * 1.0 / (i_simulation - 1) * (Vsumcov - Vsum2 * Vsum);
+	// std::cout << Vsum << ' ' << Vsum2 << ' ' << Vsum4 << ' ' << Vsumcov << ' '
+	// 		  << DV << ' ' << DV2 << ' ' << DVcov << ' ';
 
 	// Compute the sample of P at volume V
 	// not necessary to have fabs but avoids nans
 	Cv = 3.0 / 2 * N * 1.0 + (Vsum2 - Vsum * Vsum) / 1.0;
-	stdCv = std::sqrt(DV2 / 1.0 + (2 * Vsum) * (2 * Vsum) * DV);
+	stdCv = std::sqrt(DV2 / 1.0 + (2 * Vsum) * (2 * Vsum) * DV +
+					  -2 * (2 * Vsum) / 1.0 * DVcov);
 	// Write the new obtained P
+	std::ofstream Cv_file("output_data/Cv_total.dat", std::ofstream::out | std::ofstream::app);
+	// PV_file << "#V P std[P] rho W DW Delta\n";
 	Cv_file << rho << ' '
 			<< Cv << ' '
 			<< stdCv << ' '
