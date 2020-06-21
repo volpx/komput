@@ -19,8 +19,17 @@ set x2range [*:*] reverse
 
 set link x2 via 125/x inverse 125/x
 
-set errorbars  linecolor "#0000ff"
-plot "output_data/PV_total.dat" u 1:2:3 w yerror pointtype 7 pointsize 0.3 \
- ,"output_data/PV_total.dat" u 4:2 pointtype 0 notitle axes x2y1
+# set errorbars  linecolor "#0000ff"
+# set yerrorbars 1 linecolor "#0000ff"
+
+# plot "output_data/PV_total.dat" u 1:2:3 w yerror pointtype 7 pointsize 0.3 title "P"\
+#  ,"output_data/PV_total.dat" u 4:2 pointtype 0 notitle axes x2y1 \
+#   ,"output_data/PV_total.dat" u 1:(125/column(1)) w points linecolor "#00ff00" title "PV=NRT"\
+#  ,"output_data/PV_total.dat" u 1:(-1./3/column(1)*column(5)):(1./3/column(1)*sqrt(column(6))) w yerror pointtype 6 pointsize 0.3 linecolor "#00ff00" title "W"
+
+plot "output_data/PV_total.dat" u 1:2:3 w yerrorbars pointtype 7 pointsize 0.3 title "P"\
+ ,"output_data/PV_total.dat" u 4:2 pointtype 0 notitle axes x2y1 \
+  ,"output_data/PV_total.dat" u 1:(125/column(1)) w points linecolor "#00ff00" title "PV=NRT" \
+ ,"output_data/PV_total.dat" u 1:(-1./3/column(1)*column(5)):(1./3/column(1)*sqrt(column(6))) w yerrorbars  pointtype 6 pointsize 0.3 title "W"
 
 set output
