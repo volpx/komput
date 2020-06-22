@@ -131,19 +131,12 @@ void autocorrelation(std::vector<double> &corr,
 /*
 Does the interaction between the particles in my system
 */
-template <typename AddArg1,
-		  typename AddArg2>
+template <typename IntCall,
+		  typename IntSetup>
 int do_interactions(
 	const std::vector<Vec3D> &pos,
-	int (*interaction)(
-		const size_t i, const size_t j,
-		const Vec3D &alias, const double d,
-		AddArg1 *addarg1),
-	AddArg1 *addarg1 = nullptr,
-	int (*start_interaction)(
-		const size_t i,
-		AddArg2 *addarg2) = nullptr,
-	AddArg2 *addarg2 = nullptr,
+	IntCall *interaction,
+	IntSetup *start_interaction = nullptr,
 	const double L = 1.)
 {
 	// TODO: maybe check for return codes
@@ -157,7 +150,7 @@ int do_interactions(
 	{
 		// Clear the acceleration before start adding contributions
 		if (start_interaction)
-			start_interaction(i, addarg2);
+			(*start_interaction)(i);
 
 		// Acceleration on i
 		// caused by all other particles
@@ -173,7 +166,7 @@ int do_interactions(
 				// and also compute the correct alias
 				if ((d = compute_alias(pos[i], alias, L)) > 0)
 				{
-					interaction(i, j, alias, d, addarg1);
+					(*interaction)(i, j, alias, d);
 				}
 				// Else: no interaction, un-perfect packing of spheres
 			}
