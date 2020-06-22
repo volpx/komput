@@ -5,8 +5,8 @@
 # $^ are all the dependencies
 
 # Directories:
-INC_DIR     = include
-SRC_DIR     = src
+INC_DIR     = ../include
+SRC_DIR     = ../src
 BUILD_DIR   = build
 OBJ_DIR     = $(BUILD_DIR)/obj
 LIB_DIR     = lib
