@@ -128,4 +128,58 @@ private:
 void autocorrelation(std::vector<double> &corr,
 					 const std::vector<double> &x);
 
+/*
+Does the interaction between the particles in my system
+*/
+template <typename AddArg1,
+		  typename AddArg2>
+int do_interactions(
+	const std::vector<Vec3D> &pos,
+	int (*interaction)(
+		const size_t i, const size_t j,
+		const Vec3D &alias, const double d,
+		AddArg1 *addarg1),
+	AddArg1 *addarg1 = nullptr,
+	int (*start_interaction)(
+		const size_t i,
+		AddArg2 *addarg2) = nullptr,
+	AddArg2 *addarg2 = nullptr,
+	const double L = 1.)
+{
+	// TODO: maybe check for return codes
+
+	// Number of particles
+	const size_t N{pos.size()};
+	double d;
+	Vec3D alias;
+
+	for (size_t i{0}; i < N; i++)
+	{
+		// Clear the acceleration before start adding contributions
+		if (start_interaction)
+			start_interaction(i, addarg2);
+
+		// Acceleration on i
+		// caused by all other particles
+		for (size_t j{0}; j < N; j++)
+		{
+			// Skip the self case
+			if (i != j)
+			{
+				// Copy the particle j
+				alias = pos[j];
+
+				// Check if there is interaction
+				// and also compute the correct alias
+				if ((d = compute_alias(pos[i], alias, L)) > 0)
+				{
+					interaction(i, j, alias, d, addarg1);
+				}
+				// Else: no interaction, un-perfect packing of spheres
+			}
+		}
+	}
+	return 0;
+}
+
 #endif // __SIMULATION_H__
