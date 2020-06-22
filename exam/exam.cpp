@@ -9,12 +9,16 @@
 // Interaction potential
 double V_LJ(double x)
 {
-	return 4 * (std::pow(1.0 / x, 12) - std::pow(1.0 / x, 6));
+	return 4 * (std::pow(1. / x, 12) - std::pow(1. / x, 6));
 }
 // Derivative of the potential
 double dV_LJ(double x)
 {
-	return -4 * (12.0 / std::pow(x, 13) - 6.0 / std::pow(x, 7));
+	return -4 * (12. / std::pow(x, 13) - 6. / std::pow(x, 7));
+}
+double ddV_LJ(double x)
+{
+	return 4 * (12. * 13. / std::pow(x, 14) - 6. * 7. / std::pow(x, 8));
 }
 
 int main()
@@ -95,13 +99,25 @@ int main()
 	std::vector<Vec3D> *tmp;
 
 	// Wanted quantities
-	std::vector<double> nabla2U(2);
+	std::vector<double> Bs(M);
 
 	// Boilerplate variables
 	typedef struct
 	{
+		std::vector<Vec3D> **pos = nullptr;
+		std::vector<Vec3D> **acc = nullptr;
+		double (*Vr)(double) = nullptr;
+		double (*dVr)(double) = nullptr;
+		double (*ddVr)(double) = nullptr;
+		double Vtot;
+		double Q;
 	} Args1;
 	Args1 *args1;
+	args1->pos = &pos1;
+	args1->acc = &acc1;
+	args1->Vr = V_LJ;
+	args1->dVr = dV_LJ;
+	args1->ddVr = ddV_LJ;
 	int (*interaction)(
 		const size_t i, const size_t j,
 		const Vec3D &alias, const double d,
@@ -109,17 +125,29 @@ int main()
 		[](const size_t i, const size_t j,
 		   const Vec3D &alias, const double d,
 		   Args1 *args1) -> int {
+			// Obviously update accelerations
+			(**args1->acc)[i] +=
+				-args1->dVr(d) / d * ((**args1->pos)[i] - alias);
+			// Addup the potential
+			if (i < j)
+				args1->Vtot += args1->Vr(d);
+			// Compute the quantity
+			args1->Q += args1->ddVr(d) + args1->dVr(d) * 2 / d;
 			return 0;
 		}};
+
 	typedef struct
 	{
+		std::vector<Vec3D> **acc = nullptr;
 	} Args2;
 	Args2 *args2;
+	args2->acc = &acc1;
 	int (*start_interaction)(
 		const size_t i,
 		Args2 *args2){
 		[](const size_t i,
 		   Args2 *args2) -> int {
+			(**args2->acc)[i].clear();
 			return 0;
 		}};
 
@@ -145,6 +173,15 @@ int main()
 	std::cout << "Start velocity verlet" << std::endl;
 	for (uint32_t i = 1; i < M; i++)
 	{
+		// Print progress
+		if ((i % 1000) == 0)
+		{
+			std::cout
+				<< "Step: " << i
+				<< "\t Perc: " << (i * 100) / M
+				<< "\tQ: " << 1.;
+		}
+
 		// Velocity - Verlet
 		// Compute all new positions
 		for (uint32_t j = 0; j < N; j++)
@@ -160,9 +197,13 @@ int main()
 			(*pos1)[j].z -= L * std::floor((*pos1)[j].z / L);
 		}
 
-		// Compute potential and new accelerations
-		new_acceleration(
-			*acc1, *pos1, V_LJ, 1, L, dV_LJ);
+		// Compute new accelerations and quantities
+		args1->Q = 0;
+		args1->Vtot = 0;
+		do_interactions(*pos1,
+						interaction, args1,
+						start_interaction, args2,
+						L);
 
 		// Compute all new velocities
 		for (uint32_t j = 0; j < N; j++)
@@ -172,20 +213,9 @@ int main()
 						 0.5 * dt * ((*acc0)[j] + (*acc1)[j]);
 		}
 
-		// Compute quantities
-		do_interactions(*pos1,
-						interaction, args1,
-						start_interaction, args2,
-						L);
-
-		// Print progress
-		if ((i % 1000) == 0)
-		{
-			std::cout
-				<< "Step: " << i
-				<< "\t Perc: " << (i * 100) / M
-				<< "\tQ: " << 1.;
-		}
+		// Quantities analysis
+		args1->Q /= N;
+		Bs[i] = args1->Q / 48;
 
 		// Swap pointers for next step
 		tmp = pos1;
