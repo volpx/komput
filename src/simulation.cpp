@@ -324,24 +324,3 @@ uint32_t AutoCorr::get_means_number() const
 {
 	return c_means_number;
 }
-
-void autocorrelation(std::vector<double> &corr,
-					 const std::vector<double> &x)
-{
-	double m = mean(x);
-
-	for (int t = 0; t < corr.size(); t++)
-	{
-		double n = 0; // Numerator
-		double d = 0; // Denominator
-
-		for (int i = 0; i < x.size() - t; i++)
-		{
-			double xim = x[i] - m;
-			n += xim * (x[i + t] - m);
-			d += xim * xim;
-		}
-
-		corr[t] = n / d;
-	}
-}

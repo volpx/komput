@@ -14,6 +14,10 @@ public:
 	Vec3D(){};
 	// Normal constructor (could overload the above)
 	Vec3D(double x, double y, double z);
+	// Copying constructor
+	Vec3D(const Vec3D &other);
+	// Moving constructor
+	Vec3D(Vec3D &&other);
 
 	// Actual class parameters
 	double x;
@@ -41,13 +45,13 @@ public:
 
 	friend Vec3D operator-(const Vec3D &a, const Vec3D &b);
 	friend Vec3D operator+(const Vec3D &a, const Vec3D &b);
-	friend Vec3D operator*(const Vec3D &a, const double k);
 	friend Vec3D operator*(const double k, const Vec3D &a);
 
+	friend Vec3D &operator-(Vec3D &&a, const Vec3D &b);
+	friend Vec3D &operator+(Vec3D &&a, const Vec3D &b);
+	friend Vec3D &operator*(const double k, Vec3D &&a);
+
 	// Overload of the scalar product operator
-#if __cplusplus >= 202002L
-	friend double operator<=>(const Vec3D &a, const Vec3D &b);
-#endif
 	friend double operator*(const Vec3D &a, const Vec3D &b);
 
 	// Overload handy output operator

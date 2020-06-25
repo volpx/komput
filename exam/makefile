@@ -21,7 +21,7 @@ RM          = rm -f
 CPP_FLAGS   = -I$(INC_DIR) -O3 -std=c++17 #-Warray-bounds #-Wall
 C_FLAGS     = -I$(INC_DIR) -O3
 ASM_FLAGS   = -I$(INC_DIR)
-LIBS        =  # -lboost_iostreams -lboost_system -lboost_filesystem
+LIBS        =  -lgsl -lgslcblas # -lboost_iostreams -lboost_system -lboost_filesystem
 L_FLAGS     = $(LIBS)
 
 # CPP_FLAGS += -DDEBUG
@@ -64,7 +64,7 @@ endif
 # Rules
 exam: $(OBJS) $(OBJ_DIR)/exam.o
 	$(CPP) -o $@ $^ $(CPP_FLAGS) $(L_FLAGS)
-	
+
 # Mains rules
 $(OBJ_DIR)/%.o: %.cpp
 	$(CPP) -c -o $@ $< $(CPP_FLAGS)

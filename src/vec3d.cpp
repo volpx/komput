@@ -7,6 +7,20 @@ Vec3D::Vec3D(double x, double y, double z)
 {
 }
 
+Vec3D::Vec3D(const Vec3D &other)
+	: x{other.x},
+	  y{other.y},
+	  z{other.z}
+{
+}
+
+Vec3D::Vec3D(Vec3D &&other)
+	: x{other.x},
+	  y{other.y},
+	  z{other.z}
+{
+}
+
 double Vec3D::norm() const
 {
 	return std::sqrt(this->x * this->x + this->y * this->y + this->z * this->z);
@@ -95,22 +109,33 @@ Vec3D operator*(const double k, const Vec3D &a)
 {
 	return Vec3D{a.x * k, a.y * k, a.z * k};
 }
-Vec3D operator*(const Vec3D &a, const double k)
+
+Vec3D &operator-(Vec3D &&a, const Vec3D &b)
 {
-	return k * a;
+	a.x -= b.x;
+	a.y -= b.y;
+	a.z -= b.z;
+	return a;
+}
+Vec3D &operator+(Vec3D &&a, const Vec3D &b)
+{
+	a.x += b.x;
+	a.y += b.y;
+	a.z += b.z;
+	return a;
+}
+Vec3D &operator*(const double k, Vec3D &&a)
+{
+	a.x *= k;
+	a.y *= k;
+	a.z *= k;
+	return a;
 }
 
 double operator*(const Vec3D &a, const Vec3D &b)
 {
 	return a.x * b.x + a.y * b.y + a.z * b.z;
 }
-
-#if __cplusplus >= 202002L
-double operator<=>(const Vec3D &a, const Vec3D &b)
-{
-	return a.x * b.x + a.y * b.y + a.z * b.z;
-}
-#endif
 
 std::ostream &operator<<(std::ostream &out, const Vec3D &vec)
 {

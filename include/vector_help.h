@@ -16,5 +16,27 @@ uint32_t ind_min(const std::vector<double> &vec,
 uint32_t ind_max(const std::vector<double> &vec,
 				 std::function<double(double)> map = nullptr);
 
-double mean(const std::vector<double> &x);
+template <typename T>
+T mean(const std::vector<T> &x)
+{
+	T r = 0;
+	for (T v : x)
+	{
+		r += v;
+	}
+	return r / x.size();
+}
+
+template <typename T>
+T variance(const std::vector<T> &x)
+{
+	T s1 = 0;
+	T s2 = 0;
+	for (T v : x)
+	{
+		s1 += v;
+		s2 += v * v;
+	}
+	return s2 / x.size() - s1 * s1 / x.size() / x.size();
+}
 #endif // __VECTOR_HELP_H__

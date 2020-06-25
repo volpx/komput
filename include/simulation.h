@@ -125,8 +125,28 @@ private:
 	std::vector<double> c_02m;
 };
 
-void autocorrelation(std::vector<double> &corr,
-					 const std::vector<double> &x);
+template <typename T>
+void autocorrelation(std::vector<T> &corr,
+					 const std::vector<T> &x)
+{
+	T m = mean(x);
+	T xim, n, d;
+
+	for (size_t t = 0; t < corr.size(); t++)
+	{
+		n = 0; // Numerator
+		d = 0; // Denominator
+
+		for (size_t i = 0; i < x.size() - t; i++)
+		{
+			xim = x[i] - m;
+			n += xim * (x[i + t] - m);
+			d += xim * xim;
+		}
+
+		corr[t] = n / d;
+	}
+}
 
 /*
 Does the interaction between the particles in my system
@@ -148,11 +168,11 @@ int do_interactions(
 
 	for (size_t i{0}; i < N; i++)
 	{
-		// Clear the acceleration before start adding contributions
+		// House keeping at the begin
 		if (start_interaction)
 			(*start_interaction)(i);
 
-		// Acceleration on i
+		// Interaction on i
 		// caused by all other particles
 		for (size_t j{0}; j < N; j++)
 		{

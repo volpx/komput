@@ -69,13 +69,3 @@ uint32_t ind_max(const std::vector<double> &vec,
 					   [&](double x) -> double { return -x; });
 	}
 }
-
-double mean(const std::vector<double> &x)
-{
-	double r = 0;
-	for (double v : x)
-	{
-		r += v;
-	}
-	return r / x.size();
-}
