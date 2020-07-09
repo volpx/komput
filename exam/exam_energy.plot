@@ -12,7 +12,7 @@ set ylabel "Energy"
 # set yrange [-100:400]
 set grid
 plot "output_data/data_evolution.dat" using 2:5 with lines title "E=T+V"\
- , "output_data/data_evolution.dat" using 2:3 with lines title "T"\
- ,"output_data/data_evolution.dat" using 2:4 with lines title "V"
+   , "output_data/data_evolution.dat" using 2:3 with lines title "T"\
+   , "output_data/data_evolution.dat" using 2:4 with lines title "V"
 # write to file
 set output
