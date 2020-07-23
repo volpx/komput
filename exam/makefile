@@ -8,7 +8,7 @@
 INC_DIR     = ../include
 SRC_DIR     = ../src
 BUILD_DIR   = build
-OUTDATA_DIR = output_data
+OUTDATA_DIR = data
 OBJ_DIR     = $(BUILD_DIR)/obj
 LIB_DIR     = lib
 
@@ -34,22 +34,13 @@ L_FLAGS     = $(LIBS)
 SRCS_C      = $(wildcard $(SRC_DIR)/*.c)
 SRCS_CPP    = $(wildcard $(SRC_DIR)/*.cpp)
 # SRCS_ASM    = $(wildcard $(SRC_DIR)/*.asm)
-MAINS       = $(wildcard *.c) \
-							$(wildcard *.cpp)
-# MAINS      += $(wildcard *.asm)
+
 
 # Objects
-MAIN_OBJS   = \
-	$(patsubst %.c,$(OBJ_DIR)/%.o,$(notdir $(MAINS))) \
-	$(patsubst %.cpp,$(OBJ_DIR)/%.o,$(notdir $(MAINS)))
-# MAIN_OBJS  += $(patsubst %.asm,$(OBJ_DIR)/%.o,$(MAINS))
-
 OBJS        = \
 	$(patsubst %.c,$(OBJ_DIR)/%.o,$(notdir $(SRCS_C))) \
 	$(patsubst %.cpp,$(OBJ_DIR)/%.o,$(notdir $(SRCS_CPP))) \
 	$(patsubst %.asm,$(OBJ_DIR)/%.o,$(notdir $(SRCS_ASM)))
-
-# OBJS       += $(MAIN_OBJS)
 
 # Attempt to create the output directories
 ifneq ($(BUILD_DIR),)
@@ -63,6 +54,9 @@ endif
 
 # Rules
 exam: $(OBJS) $(OBJ_DIR)/exam.o
+	$(CPP) -o $@ $^ $(CPP_FLAGS) $(L_FLAGS)
+
+exam_MC: $(OBJS) $(OBJ_DIR)/exam_MC.o
 	$(CPP) -o $@ $^ $(CPP_FLAGS) $(L_FLAGS)
 
 # Mains rules

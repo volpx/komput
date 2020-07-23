@@ -1,21 +1,22 @@
 #include "simulation.h"
 
-int init_lattice(std::vector<Vec3D> &pos, double L, uint32_t n, uint32_t q)
+int init_lattice(std::vector<Vec3D> &pos,
+				 const double L, const uint32_t n, const uint32_t q)
 {
 	// Get the number of particles
-	size_t N{pos.size()};
-	// Length of a single cell
-	double dl{L / n};
+	const size_t N{pos.size()};
 	if (q * n * n * n > N)
 	{
 		// too few particles spaces
 		return INIT_LATTICE_N_TOO_SMALL;
 	}
-	if (!(q == 1))
+	if (!((q == 1) || (q == 2) || (q == 4)))
 	{
-		// Only q=1 is supportes as of now
+		// Only q=1,2,4 is supported
 		return INIT_LATTICE_Q_NOT_SUPPORTED;
 	}
+	// Length of a single cell
+	const double dl{L / n};
 
 	// Place the particles
 	for (uint32_t i{0}; i < n; i++)
@@ -29,10 +30,36 @@ int init_lattice(std::vector<Vec3D> &pos, double L, uint32_t n, uint32_t q)
 					pos[q * (i * n * n + j * n + k)] =
 						Vec3D{i * dl, j * dl, k * dl};
 				}
+				else if (q == 2)
+				{
+					pos[q * (i * n * n + j * n + k) + 0] =
+						Vec3D{i * dl, j * dl, k * dl};
+					pos[q * (i * n * n + j * n + k) + 1] =
+						Vec3D{i * dl + dl / 2,
+							  j * dl + dl / 2,
+							  k * dl + dl / 2};
+				}
+				else if (q == 4)
+				{
+					pos[q * (i * n * n + j * n + k) + 0] =
+						Vec3D{i * dl, j * dl, k * dl};
+					pos[q * (i * n * n + j * n + k) + 1] =
+						Vec3D{i * dl,
+							  j * dl + dl / 2,
+							  k * dl + dl / 2};
+					pos[q * (i * n * n + j * n + k) + 2] =
+						Vec3D{i * dl + dl / 2,
+							  j * dl,
+							  k * dl + dl / 2};
+					pos[q * (i * n * n + j * n + k) + 3] =
+						Vec3D{i * dl + dl / 2,
+							  j * dl + dl / 2,
+							  k * dl};
+				}
 			}
 		}
 	}
-	return 0;
+	return N - q * n * n * n;
 }
 
 void init_distribute_maxwell_boltzmann(Vec3D &vec, double std)

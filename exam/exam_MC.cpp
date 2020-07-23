@@ -10,7 +10,6 @@
 
 #define LJ_CORRECTION_OFFSET
 // #define DEBUG_SAVE
-#define MONTE_CARLO
 
 // Interaction potential
 double V_LJ(double x)
@@ -40,22 +39,17 @@ int main()
 	// Number of particles in the box
 	constexpr uint32_t N = n * n * n;
 	// Number of time steps
-	constexpr uint32_t M = 10'000;
+	constexpr uint32_t M = 100000;
 
 	// Other lengths and simulation partitioning
 	// Length of correlation
-	constexpr uint32_t ac_length_n = 100;
-	// Thermalization length
-	constexpr uint32_t thermalization_n = 5000;
-	constexpr uint32_t Mt = M - thermalization_n;
+	constexpr uint32_t ac_length_n = 300;
+	constexpr uint32_t Delta_correction_n = 100;
 
 	// Problem constants
 	// constexpr double m = 1.;
 	// constexpr double eps = 1.;
 	// constexpr double sigma = 1.;
-	// Evolution timestep,
-	// kept it fixed but could be a function of L
-	constexpr double dt = 0.004;
 
 	// Job subdivision
 	// vary T from 0.8 to 1.3
@@ -75,6 +69,8 @@ int main()
 		const double rho;
 	};
 	std::vector<Job> jobs;
+	// jobs.reserve(1);
+	// jobs.emplace_back(Job{0, 1.2, 0.7});
 	jobs.reserve(jobs_n);
 	for (int i = 0; i < Ts_n; i++)
 	{
@@ -88,7 +84,6 @@ int main()
 	struct IntCall
 	{
 		std::vector<Vec3D> **pos = nullptr;
-		std::vector<Vec3D> **acc = nullptr;
 		double (*const Vr)(double) = nullptr;
 		double (*const dVr)(double) = nullptr;
 		double (*const ddVr)(double) = nullptr;
@@ -99,9 +94,6 @@ int main()
 		void operator()(const size_t i, const size_t j,
 						const Vec3D &alias, const double d)
 		{
-			// Obviously update accelerations
-			(**acc)[i] +=
-				-dVr(d) / d * ((**pos)[i] - alias);
 			// Addup the potential
 			if (i < j)
 				V += (Vr(d) + V_offset);
@@ -111,18 +103,15 @@ int main()
 	};
 	struct IntSetup
 	{
-		std::vector<Vec3D> **acc = nullptr;
 		void operator()(const size_t i)
 		{
-			// Clear the acceleration before start adding contributions
-			(**acc)[i].clear();
 		}
 	};
 
 	// Open main file of output
 	// std::ofstream B_file("data/B.dat",
 	// 					 std::ofstream::out | std::ofstream::app);
-	std::ofstream B_file{"data/B.dat"};
+	std::ofstream B_file{"data/B_MC.dat"};
 	B_file << "#T rho B stdB\n";
 
 #ifdef DEBUG_SAVE
@@ -140,26 +129,20 @@ int main()
 
 	// Evolution status variables
 	std::vector<Vec3D> pos_a(N);
-	std::vector<Vec3D> vel_a(N);
-	std::vector<Vec3D> acc_a(N);
 	std::vector<Vec3D> pos_b(N);
-	std::vector<Vec3D> vel_b(N);
-	std::vector<Vec3D> acc_b(N);
 
 	// Proper pointers to handle them
 	std::vector<Vec3D> *pos0 = &pos_a;
 	std::vector<Vec3D> *pos1 = &pos_b;
-	std::vector<Vec3D> *vel0 = &vel_a;
-	std::vector<Vec3D> *vel1 = &vel_b;
-	std::vector<Vec3D> *acc0 = &acc_a;
-	std::vector<Vec3D> *acc1 = &acc_b;
 	std::vector<Vec3D> *tmp = nullptr;
 
 	// Wanted quantities accumulator
-	std::vector<double> Qs(Mt);
+	std::vector<double> Qs_all(M);
+	std::vector<double> Qs(M);
 	std::vector<double> Qac(ac_length_n);
+	std::vector<double> As(Delta_correction_n);
 
-	// job loops
+	// job loop
 	for (const auto &job : jobs)
 	{
 		// Extract job data
@@ -170,8 +153,10 @@ int main()
 		const double rho = job.rho;
 
 		// Derivatives of job data
-		const double vstd = std::sqrt(2 * Temp);
+		const double beta = 1. / Temp;
 		const double L = n * std::pow(1. / rho, 1. / 3);
+		double Delta = L / n / 10;
+		double lambda = 0.05;
 
 #ifdef LJ_CORRECTION_OFFSET
 		const double V_offset = -V_LJ(L / 2);
@@ -187,8 +172,6 @@ int main()
 			<< "\nsigma:\t" << 1.
 			<< "\nrho:\t" << rho
 			<< "\nT:\t" << Temp
-			<< "\ndt:\t" << dt
-			<< "\nvstd:\t" << vstd
 			<< "\nV_LJ(L/2):\t" << V_LJ(L / 2)
 #ifdef LJ_CORRECTION_OFFSET
 			<< "\nLJ offest enabled"
@@ -200,24 +183,25 @@ int main()
 #endif
 
 		IntCall interaction{
-			&pos1, &acc1, V_LJ, dV_LJ, ddV_LJ, V_offset};
-		IntSetup start_interaction{&acc1};
+			&pos1, V_LJ, dV_LJ, ddV_LJ, V_offset};
+		IntSetup start_interaction{};
 
-		double E, T;
+		double V1, V0;
 		double &V = interaction.V;
 		double &Q = interaction.Q;
+		double Q0, A, A_mean;
+		uint32_t thermalization_n{0};
+		bool thermalized{false};
 
 		// STARTING
 
 		// Initialize positions with uniform lattice conditions
 		std::cout << "Init lattice" << std::endl;
-		init_lattice(*pos0, L, n, 1);
+		init_lattice(*pos0, L, n);
 		apply_periodic_bounds(*pos0, L);
 
 		// Compute new accelerations and quantities
 		interaction.pos = &pos0;
-		interaction.acc = &acc0;
-		start_interaction.acc = &acc0;
 		V = 0;
 		Q = 0;
 		do_interactions(*pos0,
@@ -225,35 +209,18 @@ int main()
 						&start_interaction,
 						L);
 		interaction.pos = &pos1;
-		interaction.acc = &acc1;
-		start_interaction.acc = &acc1;
-
-		// Initialize velocities as gaussian on the components
-		T = 0;
-		std::cout << "Init velocities" << std::endl;
-		for (uint32_t i = 0; i < N; i++)
-		{
-			init_distribute_maxwell_boltzmann((*vel0)[i], vstd);
-			T += 0.5 * (*vel0)[i].norm2();
-		}
 
 		// Quantities analysis
-		E = T + V;
-		Q /= N;
-
-		// Thermalizaton quantities
-		if (0 >= thermalization_n)
-		{
-			Qs[0] = Q;
-		}
+		V0 = V;
+		Q0 = Q / N;
+		As[0] = 0.5; // neutral value, i don't have any other data
 
 		// Output
 		std::cout
 			<< "First data:"
-			<< "\tE: " << E
-			<< "\tT: " << T
-			<< "\tV: " << V
-			<< "\tQ: " << Q
+			<< "\tV: " << V0
+			<< "\tQ: " << Q0
+			<< "\tDelta: " << Delta
 			<< std::endl;
 
 #ifdef DEBUG_SAVE
@@ -267,25 +234,22 @@ int main()
 #endif
 
 		// Main loop of the evolution
-		std::cout << "Start velocity verlet" << std::endl;
+		std::cout << "Start monte carlo" << std::endl;
 		for (uint32_t i = 1; i < M; i++)
 		{
-			// Velocity - Verlet
 			// Compute all new positions
 			for (uint32_t j = 0; j < N; j++)
 			{
-				// Position step
-				(*pos1)[j] = (*pos0)[j] +
-							 dt * (*vel0)[j] +
-							 0.5 * dt * dt * (*acc0)[j];
-
+				(*pos1)[j].x = (*pos0)[j].x + Delta * (randu() - 0.5);
+				(*pos1)[j].y = (*pos0)[j].y + Delta * (randu() - 0.5);
+				(*pos1)[j].z = (*pos0)[j].z + Delta * (randu() - 0.5);
 				// Periodic condition
 				(*pos1)[j].x -= L * std::floor((*pos1)[j].x / L);
 				(*pos1)[j].y -= L * std::floor((*pos1)[j].y / L);
 				(*pos1)[j].z -= L * std::floor((*pos1)[j].z / L);
 			}
 
-			// Compute new accelerations and quantities
+			// Compute quantities
 			Q = 0;
 			V = 0;
 			do_interactions(*pos1,
@@ -293,37 +257,63 @@ int main()
 							&start_interaction,
 							L);
 
-			// Compute all new velocities
-			T = 0;
-			for (uint32_t j = 0; j < N; j++)
+			// New potential
+			V1 = V;
+			// Transition probability (save it)
+			A = std::exp(-beta * (V1 - V0));
+			As[i % Delta_correction_n] = A;
+
+			// corrections to Delta
+			if (!thermalized)
 			{
-				// Velocity step
-				(*vel1)[j] = (*vel0)[j] +
-							 0.5 * dt * ((*acc0)[j] + (*acc1)[j]);
-				T += 0.5 * (*vel1)[j].norm2();
+				if (i % Delta_correction_n == 0)
+				{
+					A_mean = mean(As);
+					if (A_mean > 0.3 && A_mean < 0.7)
+					{
+						thermalized = true;
+						thermalization_n = i;
+					}
+					else
+					{
+						// Correction
+						Delta *= 1 + lambda * (A_mean - 0.5);
+					}
+				}
+			}
+
+			// Decide if accept the new status
+			// and put it in _0
+			if (randu() < A)
+			{
+				// accept the new configuration
+				tmp = pos0;
+				pos0 = pos1;
+				pos1 = tmp;
+				V0 = V1;
+				Q0 = Q / N;
+			}
+			else
+			{
+				// else the new sample is the same as before
+				// no need of doing anything
 			}
 
 			// Quantities analysis
-			E = T + V;
-			Q /= N;
-
 			// Thermalization quantities
-			if (i >= thermalization_n)
-			{
-				Qs[i - thermalization_n] = Q;
-			}
+			Qs_all[i] = Q0;
 
 			// Print progress
 			if ((i % 1000) == 0)
 			{
+				A_mean = mean(As);
 				std::cout
 					<< "Step: " << i
 					<< "\tP: " << (i * 100) / M
-					<< "\tt: " << i * dt
-					<< "\tE: " << E
-					<< "\tT: " << T
-					<< "\tV: " << V
-					<< "\tQ: " << Q
+					<< "\tV: " << V0
+					<< "\tQ: " << Q0
+					<< "\tDelta: " << Delta
+					<< "\tA_mean: " << A_mean
 					<< std::endl;
 			}
 
@@ -337,31 +327,25 @@ int main()
 				<< E << ' '
 				<< Q << '\n';
 #endif
-
-			// Swap pointers for next step
-			tmp = pos1;
-			pos1 = pos0;
-			pos0 = tmp;
-
-			tmp = vel1;
-			vel1 = vel0;
-			vel0 = tmp;
-
-			tmp = acc1;
-			acc1 = acc0;
-			acc0 = tmp;
 		}
 
 		// Post analysis
 		std::cout << "Post analysis" << std::endl;
 
+		// Throw away not termalized Q
+		Qs.resize(M - thermalization_n);
+		for (uint32_t i{0}; i < Qs.size(); ++i)
+		{
+			Qs[i] = Qs_all[i + thermalization_n];
+		}
+
 		// B autocorrelation
 		autocorrelation(Qac, Qs);
 		// Correlation factor calculation with fit
-		double par[3] = {1., 0.1, 0.};
+		double par[3];
 		fit_to_exp(par, tac, Qac);
 		// Number of dependent points
-		double tau = 1. / par[1];
+		double tau = (1. / par[1]);
 
 #ifdef DEBUG_SAVE
 		std::ofstream Qac_file("data/Qautocorr.dat");
@@ -381,11 +365,11 @@ int main()
 
 		double meanQ = mean(Qs);
 		double DmeanQ = (2 * tau + 1) / Qs.size() * variance(Qs, 1);
-		// DmeanQ *= 25; // Magic factor
 
 		std::cout
 			<< "T: " << Temp
 			<< " rho: " << rho
+			<< " therm_n: " << thermalization_n
 			<< " B: " << meanQ / 48
 			<< " +/- " << std::sqrt(DmeanQ) / 48
 			<< " tau: " << tau

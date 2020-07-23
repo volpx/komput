@@ -5,6 +5,9 @@ int fit_to_exp(double lambda[3],
 			   std::vector<double> &datay)
 {
 	const size_t n{datax.size()};
+	// number of parameters
+	const size_t p = 3;
+	double lambda_init[p] = {lambda[0], lambda[1], lambda[2]};
 
 	struct data
 	{
@@ -53,8 +56,6 @@ int fit_to_exp(double lambda[3],
 			return GSL_SUCCESS;
 		}};
 
-	// number of parameters
-	const size_t p = 3;
 	const gsl_multifit_nlinear_type *multifittype = gsl_multifit_nlinear_trust;
 	gsl_multifit_nlinear_parameters fdf_params =
 		gsl_multifit_nlinear_default_parameters();
@@ -67,7 +68,6 @@ int fit_to_exp(double lambda[3],
 		std::cerr << "gsl_multifit_nlinear_alloc: " << w << std::endl;
 		return -1;
 	}
-	double lambda_init[p] = {1.0, 10., 0.0};
 	gsl_vector_view lambda_init_wiew = gsl_vector_view_array(lambda_init, p);
 	gsl_multifit_nlinear_fdf fdf;
 	// define the function to be minimized

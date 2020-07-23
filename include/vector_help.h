@@ -19,8 +19,8 @@ uint32_t ind_max(const std::vector<double> &vec,
 template <typename T>
 T mean(const std::vector<T> &x)
 {
-	T r = 0;
-	for (T v : x)
+	T r{0};
+	for (const T &v : x)
 	{
 		r += v;
 	}
@@ -28,15 +28,15 @@ T mean(const std::vector<T> &x)
 }
 
 template <typename T>
-T variance(const std::vector<T> &x)
+T variance(const std::vector<T> &x, const int ddof = 0)
 {
-	T s1 = 0;
-	T s2 = 0;
-	for (T v : x)
+	T s1{0};
+	T s2{0};
+	for (const T &v : x)
 	{
 		s1 += v;
 		s2 += v * v;
 	}
-	return s2 / x.size() - s1 * s1 / x.size() / x.size();
+	return s2 / (x.size() - ddof) - s1 * s1 / (x.size() * (x.size() - ddof));
 }
 #endif // __VECTOR_HELP_H__
