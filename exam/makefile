@@ -18,7 +18,7 @@ C           = gcc
 RM          = rm -f
 
 # Flags
-CPP_FLAGS   = -I$(INC_DIR) -O3 -std=c++17 #-Warray-bounds #-Wall
+CPP_FLAGS   = -I$(INC_DIR) -O3 -std=c++14 -Wall
 C_FLAGS     = -I$(INC_DIR) -O3
 ASM_FLAGS   = -I$(INC_DIR)
 LIBS        =  -lgsl -lgslcblas # -lboost_iostreams -lboost_system -lboost_filesystem

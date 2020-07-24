@@ -8,7 +8,7 @@
 #include <iostream>
 #include <vector>
 
-#define LJ_CORRECTION_OFFSET
+// #define LJ_CORRECTION_OFFSET
 // #define DEBUG_SAVE
 
 // Interaction potential
@@ -29,21 +29,23 @@ double ddV_LJ(double x)
 int main()
 {
 	// Number of temps
-	constexpr int Ts_n = 5;
+	constexpr int Ts_n = 6;
 	// Number of rhos
-	constexpr int rhos_n = 15;
+	constexpr int rhos_n = 10;
 	// Number of jobs
 	constexpr int jobs_n = rhos_n * Ts_n;
 	// Number of cells on side
-	constexpr uint32_t n = 5;
+	constexpr uint32_t n = 3;
+	// Bravais lattice type
+	constexpr uint32_t q = 4;
 	// Number of particles in the box
-	constexpr uint32_t N = n * n * n;
+	constexpr uint32_t N = n * n * n * q;
 	// Number of time steps
-	constexpr uint32_t M = 100000;
+	constexpr uint32_t M = 10000;
 
 	// Other lengths and simulation partitioning
 	// Length of correlation
-	constexpr uint32_t ac_length_n = 300;
+	constexpr uint32_t ac_length_n = 500;
 	constexpr uint32_t Delta_correction_n = 100;
 
 	// Problem constants
@@ -58,7 +60,7 @@ int main()
 	// Ts[0] = 1.;
 	// vary rho from 0.65 to 0.9
 	std::vector<double> rhos(rhos_n);
-	linspace(rhos, 0.62, 1.);
+	linspace(rhos, 0.55, 1.);
 	// fill(rhos, 0.65);
 
 	// Create jobs
@@ -145,6 +147,9 @@ int main()
 	// job loop
 	for (const auto &job : jobs)
 	{
+		// Seed for the job
+		srand(job.id + 420);
+
 		// Extract job data
 		std::cout << "\n\nJob id: " << job.id
 				  << " Progress jobs: " << job.id * 100 / jobs.size()
@@ -154,12 +159,14 @@ int main()
 
 		// Derivatives of job data
 		const double beta = 1. / Temp;
-		const double L = n * std::pow(1. / rho, 1. / 3);
-		double Delta = L / n / 10;
+		const double L = n * std::pow(1. / (rho / q), 1. / 3);
+		double Delta = L / n / 100;
 		double lambda = 0.05;
 
 #ifdef LJ_CORRECTION_OFFSET
 		const double V_offset = -V_LJ(L / 2);
+#else
+		constexpr double V_offset = 0;
 #endif
 
 		// Info data
@@ -178,9 +185,6 @@ int main()
 #endif
 			<< '\n'
 			<< std::endl;
-#ifdef DEBUG_SAVE
-		data_file << "# rho: " << rho << "\n";
-#endif
 
 		IntCall interaction{
 			&pos1, V_LJ, dV_LJ, ddV_LJ, V_offset};
@@ -197,7 +201,7 @@ int main()
 
 		// Initialize positions with uniform lattice conditions
 		std::cout << "Init lattice" << std::endl;
-		init_lattice(*pos0, L, n);
+		init_lattice(*pos0, L, n, q);
 		apply_periodic_bounds(*pos0, L);
 
 		// Compute new accelerations and quantities
@@ -269,7 +273,7 @@ int main()
 				if (i % Delta_correction_n == 0)
 				{
 					A_mean = mean(As);
-					if (A_mean > 0.3 && A_mean < 0.7)
+					if (A_mean > 0.4 && A_mean < 0.6)
 					{
 						thermalized = true;
 						thermalization_n = i;
@@ -364,7 +368,7 @@ int main()
 #endif
 
 		double meanQ = mean(Qs);
-		double DmeanQ = (2 * tau + 1) / Qs.size() * variance(Qs, 1);
+		double DmeanQ = tau / Qs.size() * variance(Qs, 1);
 
 		std::cout
 			<< "T: " << Temp

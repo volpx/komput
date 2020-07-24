@@ -29,7 +29,7 @@ double ddV_LJ(double x)
 int main()
 {
 	// Number of temps
-	constexpr int Ts_n = 1;
+	constexpr int Ts_n = 6;
 	// Number of rhos
 	constexpr int rhos_n = 10;
 	// Number of jobs
@@ -63,8 +63,8 @@ int main()
 	// Job subdivision
 	// vary T from 0.8 to 1.3
 	std::vector<double> Ts(Ts_n);
-	// linspace(Ts, 0.8, 1.3);
-	Ts[0] = 1.;
+	linspace(Ts, 0.8, 1.3);
+	// Ts[0] = 1.;
 	// vary rho from 0.65 to 0.9
 	std::vector<double> rhos(rhos_n);
 	linspace(rhos, 0.55, 1.);
@@ -163,11 +163,6 @@ int main()
 	std::vector<double> Qac(ac_length_n);
 	std::vector<double> Ks(M);
 
-	// special support
-	double E, T, Temp_ist;
-	double s0, s1, T_half = 0;
-	// std::vector<Vec3D> vel_half(N);
-
 	// job loops
 	for (const auto &job : jobs)
 	{
@@ -214,6 +209,9 @@ int main()
 		IntCall interaction{
 			&pos1, &acc1, V_LJ, dV_LJ, ddV_LJ, V_offset};
 		IntSetup start_interaction{&acc1};
+
+		double E, T, Temp_ist;
+		double s0, s1, vs0, vs1, as0, as1;
 		double &V = interaction.V;
 		double &Q = interaction.Q;
 
@@ -223,7 +221,7 @@ int main()
 		std::cout << "Init lattice" << std::endl;
 		init_lattice(*pos0, L, n, q);
 		apply_periodic_bounds(*pos0, L);
-		s1 = s0 = 1;
+		s0 = 1;
 
 		// Compute new accelerations and quantities
 		interaction.pos = &pos0;
@@ -238,6 +236,7 @@ int main()
 		interaction.pos = &pos1;
 		interaction.acc = &acc1;
 		start_interaction.acc = &acc1;
+		as0 = 0;
 
 		// Initialize velocities as gaussian on the components
 		T = 0;
@@ -247,6 +246,7 @@ int main()
 			init_distribute_maxwell_boltzmann((*vel0)[i], vstd);
 			T += 0.5 * (*vel0)[i].norm2();
 		}
+		vs0 = 0;
 
 		// Quantities analysis
 		E = T + V;
@@ -282,104 +282,108 @@ int main()
 		std::cout << "Start velocity verlet" << std::endl;
 		for (uint32_t i = 1; i < M; i++)
 		{
+			std::cout << "aa" << vs0 << " " << vs1 << std::endl;
 			// Velocity - Verlet
 			// Compute all new positions
-			for (uint32_t j = 0; j < N; j++)
-			{
-				// Position step
-				// (*pos1)[j] = (*pos0)[j] +
-				// 			 dt * (*vel0)[j] +
-				// 			 0.5 * dt * dt * (*acc0)[j];
-				(*pos1)[j] = (*pos0)[j] +
-							 dt * (*vel0)[j] +
-							 0.5 * dt * dt * ((*acc0)[j] - s0 * (*vel0)[j]);
+			// for (uint32_t j = 0; j < N; j++)
+			// {
+			// 	// Position step
+			// 	(*pos1)[j] = (*pos0)[j] +
+			// 				 dt * (*vel0)[j] +
+			// 				 0.5 * dt * dt * (*acc0)[j];
 
-				// Periodic condition
-				(*pos1)[j].x -= L * std::floor((*pos1)[j].x / L);
-				(*pos1)[j].y -= L * std::floor((*pos1)[j].y / L);
-				(*pos1)[j].z -= L * std::floor((*pos1)[j].z / L);
-			}
-			T_half = 0;
-			for (uint32_t j = 0; j < N; j++)
-			{
-				T_half +=
-					0.5 * ((*vel0)[j] +
-						   0.5 * dt * ((*acc0)[j] - s0 * (*vel0)[j]))
-							  .norm2();
-			}
-			s1 = s0 + 0.5 * dt / Ms * (T + T_half - gs * Temp);
+			// 	// Periodic condition
+			// 	(*pos1)[j].x -= L * std::floor((*pos1)[j].x / L);
+			// 	(*pos1)[j].y -= L * std::floor((*pos1)[j].y / L);
+			// 	(*pos1)[j].z -= L * std::floor((*pos1)[j].z / L);
+			// }
+			s1 = s0 + dt * vs0 + 0.5 * dt * dt * as0;
+			std::cout << "a" << vs0 << " " << vs1 << std::endl;
 
 			// Compute new accelerations and quantities
-			Q = 0;
-			V = 0;
-			do_interactions(*pos1,
-							&interaction,
-							&start_interaction,
-							L);
+			// Q = 0;
+			// V = 0;
+			// do_interactions(*pos1,
+			// 				&interaction,
+			// 				&start_interaction,
+			// 				L);
+			std::cout << "b" << vs0 << " " << vs1 << std::endl;
 
 			// Compute all new velocities
 			T = 0;
-			for (uint32_t j = 0; j < N; j++)
-			{
-				// Velocity step
-				(*vel1)[j] = (*vel0)[j] +
-							 0.5 * dt * ((*acc0)[j] + (*acc1)[j] - s0 * (*vel0)[j]);
-				(*vel1)[j] /= 1 + 0.5 * dt * s1;
-				T += 0.5 * (*vel1)[j].norm2();
-			}
+			// for (uint32_t j = 0; j < N; j++)
+			// {
+			// 	// Velocity step
+			// 	(*vel1)[j] = (*vel0)[j] +
+			// 				 0.5 * dt * ((*acc0)[j] + (*acc1)[j]);
+			// 	(*vel1)[j] /= (s1 * s1);
+			// 	T += 0.5 * (*vel1)[j].norm2();
+			// }
+			std::cout << "c" << vs0 << " " << vs1 << std::endl;
+			as1 = -(T * (-2 / s1) + gs * Temp / s1) / Ms;
+			std::cout << "d" << vs0 << " " << vs1 << std::endl;
+			vs1 += +0.5 * dt * (as0 + as1);
+			std::cout << "e" << vs0 << " " << vs1 << std::endl;
 
 			// Quantities analysis
-			E = T + V;
-			Q /= N;
-			Ks[i] = T;
-			Temp_ist = T * 2 / (3 * N - 3);
+			// 			E = T + V;
+			// 			Q /= N;
+			// 			Ks[i] = T;
+			// 			Temp_ist = T * 2 / (3 * N - 3);
 
-			// Thermalization quantities
-			if (i >= thermalization_n)
-			{
-				Qs[i - thermalization_n] = Q;
-			}
+			// 			// Thermalization quantities
+			// 			if (i >= thermalization_n)
+			// 			{
+			// 				Qs[i - thermalization_n] = Q;
+			// 			}
 
-			// Print progress
-			if ((i % 1000) == 0)
-			{
-				std::cout
-					<< "Step: " << i
-					<< "\tP: " << (i * 100) / M
-					<< "\tt: " << i * dt
-					<< "\tE: " << E
-					<< "\tT: " << T
-					<< "\tV: " << V
-					<< "\tQ: " << Q
-					<< "\tTemp_ist: " << Temp_ist
-					<< std::endl;
-			}
+			// 			// Print progress
+			// 			if ((i % 1000) == 0)
+			// 			{
+			// 				std::cout
+			// 					<< "Step: " << i
+			// 					<< "\tP: " << (i * 100) / M
+			// 					<< "\tt: " << i * dt
+			// 					<< "\tE: " << E
+			// 					<< "\tT: " << T
+			// 					<< "\tV: " << V
+			// 					<< "\tQ: " << Q
+			// 					<< "\tTemp_ist: " << Temp_ist
+			// 					<< "\t" << vs0
+			// 					<< "\t" << vs1
+			// 					<< std::endl;
+			// 			}
 
-			// Output
-#ifdef DEBUG_SAVE
-			data_file
-				<< i << ' '
-				<< i * dt << ' '
-				<< T << ' '
-				<< V << ' '
-				<< E << ' '
-				<< Q << '\n';
-#endif
+			// 			// Output
+			// #ifdef DEBUG_SAVE
+			// 			data_file
+			// 				<< i << ' '
+			// 				<< i * dt << ' '
+			// 				<< T << ' '
+			// 				<< V << ' '
+			// 				<< E << ' '
+			// 				<< Q << '\n';
+			// #endif
 
-			// Swap pointers for next step
-			tmp = pos1;
-			pos1 = pos0;
-			pos0 = tmp;
+			// 			// Swap pointers for next step
+			// 			tmp = pos1;
+			// 			pos1 = pos0;
+			// 			pos0 = tmp;
 
-			tmp = vel1;
-			vel1 = vel0;
-			vel0 = tmp;
+			// 			tmp = vel1;
+			// 			vel1 = vel0;
+			// 			vel0 = tmp;
 
-			tmp = acc1;
-			acc1 = acc0;
-			acc0 = tmp;
+			// 			tmp = acc1;
+			// 			acc1 = acc0;
+			// 			acc0 = tmp;
 
 			s0 = s1;
+			std::cout << "f" << vs0 << " " << vs1 << std::endl;
+			vs0 = vs1;
+			std::cout << "g" << vs0 << " " << vs1 << std::endl;
+			as0 = as1;
+			getchar();
 		} // End main VV loop
 
 		// Post analysis
