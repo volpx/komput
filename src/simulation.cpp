@@ -145,6 +145,7 @@ int sign(double x)
 }
 double compute_alias(const Vec3D &me, Vec3D &other, double L)
 {
+	// I'd like to thank @zecco for this immensly valuable contribution
 	if (std::fabs(me.x - other.x) > L / 2)
 	{
 		other.x += sign(me.x - other.x) * L;
