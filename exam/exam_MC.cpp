@@ -89,9 +89,9 @@ int main()
 		double (*const Vr)(double) = nullptr;
 		double (*const dVr)(double) = nullptr;
 		double (*const ddVr)(double) = nullptr;
+		const double V_offset;
 		double V;
 		double Q;
-		const double V_offset;
 
 		void operator()(const size_t i, const size_t j,
 						const Vec3D &alias, const double d)
@@ -187,7 +187,7 @@ int main()
 			<< std::endl;
 
 		IntCall interaction{
-			&pos1, V_LJ, dV_LJ, ddV_LJ, V_offset};
+			&pos1, V_LJ, dV_LJ, ddV_LJ, V_offset, 0, 0};
 		IntSetup start_interaction{};
 
 		double V1, V0;

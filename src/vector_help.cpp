@@ -22,7 +22,7 @@ void linspace(std::vector<double> &vec, const double xmin, const double xmax)
 void fill(std::vector<double> &vec, const double val)
 {
 	std::function<double(uint32_t)> f{
-		[&](uint32_t i) -> double { return val; }};
+		[&](uint32_t) -> double { return val; }};
 	map(vec, f);
 }
 

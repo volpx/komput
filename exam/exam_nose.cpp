@@ -30,10 +30,10 @@ int main()
 {
 	// Number of temps
 	constexpr int Ts_n = 1;
-	// constexpr int Ts_n = 10;
+	// constexpr int Ts_n = 1;
 	// Number of rhos
-	constexpr int rhos_n = 20;
-	// constexpr int rhos_n = 50;
+	constexpr int rhos_n = 50;
+	// constexpr int rhos_n = 1;
 	// Number of jobs
 	constexpr int jobs_n = rhos_n * Ts_n;
 	// Number of cells on side
@@ -49,17 +49,16 @@ int main()
 	// Length of correlation
 	constexpr uint32_t ac_length_n = 100;
 	// Thermalization length
-	constexpr uint32_t thermalization_n = 5000;
+	constexpr uint32_t thermalization_n = 500;
 	constexpr uint32_t Mt = M - thermalization_n;
 
 	// Problem constants
 	// constexpr double m = 1.;
 	// constexpr double eps = 1.;
 	// constexpr double sigma = 1.;
-
 	// Evolution timestep,
 	// kept it fixed but could be a function of L
-	constexpr double dt = 0.002;
+	constexpr double dt = 0.0045;
 	constexpr double gs = 3 * N + 1;
 
 	// Job subdivision
@@ -69,8 +68,8 @@ int main()
 	Ts[0] = 0.9;
 	// vary rho from 0.65 to 0.9
 	std::vector<double> rhos(rhos_n);
-	linspace(rhos, 0.6, 0.9);
-	// linspace(rhos, 0.87, 0.895);
+	// linspace(rhos, 0.6, 0.9);
+	linspace(rhos, 0.87, 0.895);
 	// fill(rhos, 0.65);
 	// rhos[0] = 0.9;
 
@@ -99,9 +98,9 @@ int main()
 		double (*const Vr)(double) = nullptr;
 		double (*const dVr)(double) = nullptr;
 		double (*const ddVr)(double) = nullptr;
-		const double V_offset;
 		double V;
 		double Q;
+		const double V_offset;
 
 		void operator()(const size_t i, const size_t j,
 						const Vec3D &alias, const double d)
@@ -170,6 +169,7 @@ int main()
 	// special support
 	double E, K, K_half, T_ist;
 	double s0 = 1, s1 = 1, vs0 = 0, vs1 = 0, as0 = 0, as1 = 0;
+	// std::vector<Vec3D> vel_half(N);
 
 	// job loops
 	for (const auto &job : jobs)
@@ -185,9 +185,9 @@ int main()
 		const double rho = job.rho;
 
 		// Derivatives of job data
-		const double vstd = std::sqrt(T);
+		const double vstd = std::sqrt(2. * T);
 		const double L = n * std::pow(1. / (rho / q), 1. / 3);
-		const double Ms = 5 * gs * T;
+		const double Ms = 0.3 * gs * T;
 
 #ifdef LJ_CORRECTION_OFFSET
 		const double V_offset = -V_LJ(L / 2);
@@ -216,7 +216,7 @@ int main()
 			<< std::endl;
 
 		IntCall interaction{
-			&pos1, &acc1, V_LJ, dV_LJ, ddV_LJ, V_offset, 0, 0};
+			&pos1, &acc1, V_LJ, dV_LJ, ddV_LJ, V_offset};
 		IntSetup start_interaction{&acc1};
 		double &V = interaction.V;
 		double &Q = interaction.Q;
@@ -255,16 +255,6 @@ int main()
 			K += (*vel0)[j].norm2();
 			K_half += ((*vel0)[j] + 0.5 * dt * (*acc0)[j]).norm2();
 		}
-		// K *= 0.5;
-		// s0 = std::sqrt((K * 2 / (3 * N)) / T);
-		// K = 0;
-		// for (uint32_t j = 0; j < N; j++)
-		// {
-		// 	// Scale velocities
-		// 	(*vel0)[j] /= s0;
-		// 	K += (*vel0)[j].norm2();
-		// }
-		// K *= 0.5;
 		K *= 0.5 / (s1 * s1);
 		K_half *= 0.5 / (s1 * s1);
 		as0 = 1.0 / (Ms * s0) * (2 * K - gs * T);
@@ -273,12 +263,10 @@ int main()
 		vs0 = 0.5 * dt * (as0 + as1);
 
 		// Quantities analysis
-		// T_ist = K * 2 / (3 * N);
+		T_ist = K * 2 / gs;
 		E = K + V;
-		E += 0.5 * Ms * vs1 * vs1 + gs * T * std::log(s1);
 		Q /= N;
 		Ks[0] = K;
-		T_ist = K * 2 / gs;
 
 		// Thermalizaton quantities
 		if (0 >= thermalization_n)
@@ -290,10 +278,10 @@ int main()
 		std::cout
 			<< "First data:"
 			<< "\tE: " << E
-			<< "\tK: " << K
+			<< "\tT: " << K
 			<< "\tV: " << V
 			<< "\tQ: " << Q
-			<< "\tT_ist: " << T_ist
+			<< "\tTemp_ist: " << T_ist
 			<< std::endl;
 
 #ifdef DEBUG_SAVE
@@ -322,9 +310,6 @@ int main()
 				(*pos1)[j] = (*pos0)[j] +
 							 dt / (s0 * s0) * (*vel0)[j] +
 							 0.5 * dt * dt / (s0 * s0) * (*acc0)[j];
-				// (*pos1)[j] = (*pos0)[j] +
-				// 			 dt * (*vel0)[j] +
-				// 			 0.5 * dt * dt * (*acc0)[j];
 
 				// Periodic condition
 				(*pos1)[j].x -= L * std::floor((*pos1)[j].x / L);
@@ -353,26 +338,15 @@ int main()
 				K += (*vel1)[j].norm2();
 				K_half += ((*vel0)[j] + 0.5 * dt * (*acc0)[j]).norm2();
 			}
-			// K *= 0.5;
-			// s0 = std::sqrt((K * 2 / (3 * N)) / T);
-			// K = 0;
-			// for (uint32_t j = 0; j < N; j++)
-			// {
-			// 	(*vel0)[j] /= s0;
-			// 	K += (*vel0)[j].norm2();
-			// }
-			// K *= 0.5;
 			K *= 0.5 / (s1 * s1);
 			K_half *= 0.5 / (s1 * s1);
 			as1 = 1.0 / (Ms * s1) * (2 * K_half - gs * T);
 			vs1 = vs0 + 0.5 * dt * (as0 + as1);
 
 			// Quantities analysis
-			E = K + V;
-			E += 0.5 * Ms * vs1 * vs1 + gs * T * std::log(s1);
+			E = K + V + 0.5 * Ms * vs1 * vs1 + gs * T * std::log(s1);
 			Q /= N;
 			Ks[i] = K;
-			// T_ist = K * 2 / (3 * N);
 			T_ist = K * 2 / gs;
 
 			// Thermalization quantities
@@ -389,10 +363,10 @@ int main()
 					<< "\tP: " << (i * 100) / M
 					<< "\tt: " << i * dt
 					<< "\tE: " << E
-					<< "\tK: " << K
+					<< "\tT: " << K
 					<< "\tV: " << V
 					<< "\tQ: " << Q
-					<< "\tT_ist: " << T_ist
+					<< "\tTemp_ist: " << T_ist
 					<< std::endl;
 			}
 

@@ -7,7 +7,7 @@ from scipy.optimize import curve_fit
 
 DATA_FOLDER = "data/"
 BFILE = DATA_FOLDER+"B.dat"
-# BFILE = DATA_FOLDER+"B_MC.dat"
+# BFILE = DATA_FOLDER+"Bcd_MC.dat"
 # BFILE = DATA_FOLDER+"bak/B_ihavemultby10thedev_otherwiseisgood.dat"
 
 
@@ -46,10 +46,10 @@ def main():
         ax.errorbar(rhos, B[i, :],
                     yerr=stdB[i, :], fmt='.-',
                     label="T: {}".format(T))
-        # ax.errorbar(rhos,
-        #             ffit(rhos, *parameters[i, :]),
-        #             yerr=stdBfit[i, :],
-        #             label="fit T:{}".format(T))
+        ax.errorbar(rhos,
+                    ffit(rhos, *parameters[i, :]),
+                    yerr=stdBfit[i, :],
+                    label="fit T:{}".format(T))
         # ax.errorbar(rhos1, B1[i, :],
         #             yerr=stdB1[i, :], fmt='.',
         #             label="T: {} smoothed".format(T))
@@ -105,10 +105,10 @@ def main():
     #                 yerr=stdAs[i, :], fmt='.-',
     #                 label="T: {}".format(T))
     # From fitted
-    # for i, T in enumerate(Ts):
-    #     ax.errorbar(rhos, As_fit[i, :],
-    #                 yerr=stdAs_fit[i, :], fmt='.-',
-    #                 label="fit T: {}".format(T))
+    for i, T in enumerate(Ts):
+        ax.errorbar(rhos, As_fit[i, :],
+                    yerr=stdAs_fit[i, :], fmt='.-',
+                    label="fit T: {}".format(T))
     # # From smoothed
     # for i, T in enumerate(Ts):
     #     ax.errorbar(rhods1, As1[i, :],

@@ -1,0 +1,93 @@
+
+
+Job id: 0 Progress jobs: 0
+
+M:	10000
+Mt:	9500
+N:	108
+L:	5.04717
+m:	1
+eps:	1
+sigma:	1
+rho:	0.84
+T:	0.8
+dt:	0.0045
+vstd:	1.26491
+V_LJ(L/2):	-0.0154265
+LJ offest enabled
+
+Init lattice
+Init velocities
+First data:	E: -509.126	T: 218.407	V: -727.532	Q: 179.507	Temp_ist: 1.34404
+Start velocity verlet
+Step: 1000	P: 10	t: 4.5	E: -510.901	T: 149.795	V: -615.313	Q: 773.434	Temp_ist: 0.921816
+Step: 2000	P: 20	t: 9	E: -510.794	T: 140.376	V: -610.749	Q: 785.946	Temp_ist: 0.863854
+Step: 3000	P: 30	t: 13.5	E: -510.444	T: 131.405	V: -593.227	Q: 881.439	Temp_ist: 0.808644
+Step: 4000	P: 40	t: 18	E: -510.483	T: 132.014	V: -611.028	Q: 815.124	Temp_ist: 0.812396
+Step: 5000	P: 50	t: 22.5	E: -510.549	T: 141.021	V: -598.576	Q: 850.029	Temp_ist: 0.867819
+Step: 6000	P: 60	t: 27	E: -511.016	T: 128.077	V: -602.787	Q: 822.272	Temp_ist: 0.788164
+Step: 7000	P: 70	t: 31.5	E: -510.742	T: 132.177	V: -613.318	Q: 779.77	Temp_ist: 0.813396
+Step: 8000	P: 80	t: 36	E: -510.529	T: 137.598	V: -593.816	Q: 869.755	Temp_ist: 0.846757
+Step: 9000	P: 90	t: 40.5	E: -510.963	T: 116.116	V: -606.263	Q: 805.545	Temp_ist: 0.714561
+Post analysis
+T0: 0.8 rho: 0.84 B: 17.0807 +/- 0.0454474 tau: 15.2068 Temp_mean: 0.796868
+
+
+Job id: 1 Progress jobs: 0
+
+M:	10000
+Mt:	9500
+N:	108
+L:	5.03354
+m:	1
+eps:	1
+sigma:	1
+rho:	0.846842
+T:	0.8
+dt:	0.0045
+vstd:	1.26491
+V_LJ(L/2):	-0.0156778
+LJ offest enabled
+
+Init lattice
+Init velocities
+First data:	E: -439.199	T: 294.812	V: -734.011	Q: 192.792	Temp_ist: 1.81423
+Start velocity verlet
+Step: 1000	P: 10	t: 4.5	E: -440.925	T: 120.409	V: -605.823	Q: 844.326	Temp_ist: 0.740977
+Step: 2000	P: 20	t: 9	E: -441.099	T: 118.745	V: -618.742	Q: 791.631	Temp_ist: 0.730737
+Step: 3000	P: 30	t: 13.5	E: -440.936	T: 141.716	V: -603.633	Q: 858.755	Temp_ist: 0.872099
+Step: 4000	P: 40	t: 18	E: -440.83	T: 133.007	V: -597.829	Q: 880.265	Temp_ist: 0.818503
+Step: 5000	P: 50	t: 22.5	E: -440.727	T: 133.793	V: -613.617	Q: 814.656	Temp_ist: 0.823344
+Step: 6000	P: 60	t: 27	E: -440.727	T: 131.608	V: -613.437	Q: 807.428	Temp_ist: 0.809898
+Step: 7000	P: 70	t: 31.5	E: -440.985	T: 139.604	V: -609.33	Q: 813.654	Temp_ist: 0.8591
+Step: 8000	P: 80	t: 36	E: -440.798	T: 114.656	V: -598.236	Q: 874.785	Temp_ist: 0.705578
+Step: 9000	P: 90	t: 40.5	E: -440.796	T: 136.993	V: -606.046	Q: 854.359	Temp_ist: 0.843035
+Post analysis
+T0: 0.8 rho: 0.846842 B: 17.8882 +/- 0.0269278 tau: 10.0108 Temp_mean: 0.797086
+
+
+Job id: 2 Progress jobs: 1
+
+M:	10000
+Mt:	9500
+N:	108
+L:	5.02006
+m:	1
+eps:	1
+sigma:	1
+rho:	0.853684
+T:	0.8
+dt:	0.0045
+vstd:	1.26491
+V_LJ(L/2):	-0.0159311
+LJ offest enabled
+
+Init lattice
+Init velocities
+First data:	E: -478.969	T: 261.397	V: -740.366	Q: 206.614	Temp_ist: 1.6086
+Start velocity verlet
+Step: 1000	P: 10	t: 4.5	E: -481.024	T: 127.012	V: -631.68	Q: 744.727	Temp_ist: 0.781611
+Step: 2000	P: 20	t: 9	E: -480.496	T: 122.375	V: -631.704	Q: 758.645	Temp_ist: 0.75308
+Step: 3000	P: 30	t: 13.5	E: -480.508	T: 120.455	V: -623.478	Q: 798.537	Temp_ist: 0.741259
+Step: 4000	P: 40	t: 18	E: -480.766	T: 134.955	V: -629.555	Q: 768.376	Temp_ist: 0.830495
+Step: 5000	P: 50	t: 22.5	E: -480.738	T: 138.108	V: -602.644	Q: 874.856	Temp_ist: 0.849898
