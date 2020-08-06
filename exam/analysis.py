@@ -7,23 +7,22 @@ from scipy.optimize import curve_fit
 
 DATA_FOLDER = "data/"
 BFILE = DATA_FOLDER+"B.dat"
-# BFILE = DATA_FOLDER+"Bcd_MC.dat"
-# BFILE = DATA_FOLDER+"bak/B_ihavemultby10thedev_otherwiseisgood.dat"
+# BFILE = DATA_FOLDER+"B_MC.dat"
+# BFILE = DATA_FOLDER+"bak/B_lotsofpoints_good_thermal5000.dat"
 
 
 def main():
     # %% Get B
     Ts, rhos, B, stdB = getB(BFILE)
-    # stdB *= 1/10*5
 
     # %% Work on B
     # # Smooth out the curve
-    # n = 10
-    # B1 = np.empty((Ts.size, rhos.size-n+1))
-    # stdB1 = np.empty_like(B1)
-    # for i in range(Ts.size):
-    #     rhos1, B1[i, :], stdB1[i, :] = flexible_mean_smoother(
-    #         rhos, B[i, :], n, True)
+    n = 5
+    B1 = np.empty((Ts.size, rhos.size-n+1))
+    stdB1 = np.empty_like(B1)
+    for i in range(Ts.size):
+        rhos1, B1[i, :], stdB1[i, :] = flexible_mean_smoother(
+            rhos, B[i, :], n, True)
 
     npar = 5
     parameters = np.empty((Ts.size, npar))
@@ -43,16 +42,16 @@ def main():
     ax.set_ylabel("B")
     ax.grid()
     for i, T in enumerate(Ts):
-        ax.errorbar(rhos, B[i, :],
-                    yerr=stdB[i, :], fmt='.-',
-                    label="T: {}".format(T))
-        ax.errorbar(rhos,
-                    ffit(rhos, *parameters[i, :]),
-                    yerr=stdBfit[i, :],
-                    label="fit T:{}".format(T))
-        # ax.errorbar(rhos1, B1[i, :],
-        #             yerr=stdB1[i, :], fmt='.',
-        #             label="T: {} smoothed".format(T))
+        # ax.errorbar(rhos, B[i, :],
+        #             yerr=stdB[i, :], fmt='.-',
+        #             label="T: {}".format(T))
+        # ax.errorbar(rhos,
+        #             ffit(rhos, *parameters[i, :]),
+        #             yerr=stdBfit[i, :],
+        #             label="fit T:{}".format(T))
+        ax.errorbar(rhos1, B1[i, :],
+                    yerr=stdB1[i, :], fmt='.',
+                    label="T: {} smoothed".format(T))
     ax.legend()
 
     # %% Compute A
@@ -76,15 +75,19 @@ def main():
             rhos, B[i, :], stdB[i, :])
 
     # # On smooothed
-    # As1 = np.empty((B1.shape[0], B1.shape[1]-1))
-    # stdAs1 = np.empty_like(As1)
-    # As11 = np.empty((As1.shape[0], As1.shape[1]-n+1))
-    # stdAs11 = np.empty_like(As11)
-    # for i in range(Ts.size):
-    #     rhods1, As1[i, :], stdAs1[i, :] = dumb_derivative(
-    #         rhos1, B1[i, :], stdB1[i, :])
-    #     rhods11, As11[i, :], stdAs11[i, :] = flexible_mean_smoother(
-    #         rhods1, As1[i, :], n, True)
+    As1 = np.empty((B1.shape[0], B1.shape[1]-1))
+    stdAs1 = np.empty_like(As1)
+    As11 = np.empty((As1.shape[0], As1.shape[1]-n+1))
+    stdAs11 = np.empty_like(As11)
+    As_smmp = np.empty_like(B1)
+    stdAs_smmp = np.empty_like(As_smmp)
+    for i in range(Ts.size):
+        rhods1, As1[i, :], stdAs1[i, :] = dumb_derivative(
+            rhos1, B1[i, :], stdB1[i, :])
+        rhods11, As11[i, :], stdAs11[i, :] = flexible_mean_smoother(
+            rhods1, As1[i, :], n, True)
+        As_smmp[i, :], stdAs_smmp[i, :] = derivative_5points(
+            rhos1, B1[i, :], stdB1[i, :])
 
     theorA_df = pd.read_csv(DATA_FOLDER+"TheorA.dat",
                             sep='\s+', skiprows=1, header=None).values
@@ -105,10 +108,10 @@ def main():
     #                 yerr=stdAs[i, :], fmt='.-',
     #                 label="T: {}".format(T))
     # From fitted
-    for i, T in enumerate(Ts):
-        ax.errorbar(rhos, As_fit[i, :],
-                    yerr=stdAs_fit[i, :], fmt='.-',
-                    label="fit T: {}".format(T))
+    # for i, T in enumerate(Ts):
+    #     ax.errorbar(rhos, As_fit[i, :],
+    #                 yerr=stdAs_fit[i, :], fmt='.-',
+    #                 label="fit T: {}".format(T))
     # # From smoothed
     # for i, T in enumerate(Ts):
     #     ax.errorbar(rhods1, As1[i, :],
@@ -121,10 +124,15 @@ def main():
     #                 fmt='.-',
     #                 label="smsm T: {}".format(T))
     # From multipoint der
+    # for i, T in enumerate(Ts):
+    #     ax.errorbar(rhos, As_mp[i, :],
+    #                 yerr=stdAs_mp[i, :], fmt='.-',
+    #                 label="mp T: {}".format(T))
+    # From multipoint der on smoothed
     for i, T in enumerate(Ts):
-        ax.errorbar(rhos, As_mp[i, :],
-                    yerr=stdAs_mp[i, :], fmt='.-',
-                    label="mp T: {}".format(T))
+        ax.errorbar(rhos1, As_smmp[i, :],
+                    yerr=stdAs_smmp[i, :], fmt='.-',
+                    label="smmp T: {}".format(T))
     # Theorical from paper
     for i, T in enumerate(Ts_th):
         ax.errorbar(rhos_th, As_th[i, :],

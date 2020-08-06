@@ -28,7 +28,9 @@ int init_lattice(std::vector<Vec3D> &pos, double L = 1,
 				 uint32_t n = 1, uint32_t q = 1);
 
 // Give nomal distributed components to vector vec
-void init_distribute_maxwell_boltzmann(Vec3D &vec, double std = 1);
+void init_distribute_maxwell_boltzmann(Vec3D &vec, const double std = 1);
+void init_distribute_maxwell_boltzmann(
+	std::vector<Vec3D> &vel, const double std = 1);
 
 // Velocity verlet
 // namespace VV

@@ -1,5 +1,5 @@
 #include "simulation.h"
-
+#include <iostream>
 int init_lattice(std::vector<Vec3D> &pos,
 				 const double L, const uint32_t n, const uint32_t q)
 {
@@ -62,12 +62,50 @@ int init_lattice(std::vector<Vec3D> &pos,
 	return N - q * n * n * n;
 }
 
-void init_distribute_maxwell_boltzmann(Vec3D &vec, double std)
+void init_distribute_maxwell_boltzmann(Vec3D &vec, const double std)
 {
 	// Give a normal distribution to the coponents
 	vec.x = std * randn();
 	vec.y = std * randn();
 	vec.z = std * randn();
+}
+// Distribute the velocities as MB then adjusts for CM motion and total std
+void init_distribute_maxwell_boltzmann(
+	std::vector<Vec3D> &vel, const double std)
+{
+	const size_t N{vel.size()};
+	Vec3D cm{0, 0, 0};
+	double exp_std{0};
+
+	for (size_t i{0}; i < N; ++i)
+	{
+		// Give a normal distribution to the components
+		vel[i].x = std * randn();
+		vel[i].y = std * randn();
+		vel[i].z = std * randn();
+
+		// Sum to cm
+		cm += vel[i];
+	}
+
+	// Corrections
+	exp_std = 0;
+	for (size_t i{0}; i < N; ++i)
+	{
+		vel[i] -= (1.0 / N) * cm;
+
+		// overall energy
+		exp_std += vel[i].norm2();
+	}
+
+	// Obtained std
+	exp_std = std::sqrt(exp_std / (3 * N));
+
+	// scale to match std
+	for (size_t i{0}; i < N; ++i)
+	{
+		vel[i] /= (exp_std / std);
+	}
 }
 
 double new_acceleration(

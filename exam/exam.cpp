@@ -29,27 +29,29 @@ double ddV_LJ(double x)
 int main()
 {
 	// Number of temps
-	constexpr int Ts_n = 1;
-	// constexpr int Ts_n = 10;
+	constexpr uint32_t Ts_n = 10;
 	// Number of rhos
-	constexpr int rhos_n = 20;
-	// constexpr int rhos_n = 50;
+	constexpr uint32_t rhos_n = 50;
+	// constexpr uint32_t Ts_n = 1;
+	// constexpr uint32_t rhos_n = 1;
 	// Number of jobs
-	constexpr int jobs_n = rhos_n * Ts_n;
+	constexpr uint32_t jobs_n = rhos_n * Ts_n;
 	// Number of cells on side
 	constexpr uint32_t n = 3;
 	// Bravais lattice type
 	constexpr uint32_t q = 4;
 	// Number of particles in the box
 	constexpr uint32_t N = n * n * n * q;
+	// Degrees of freedom
+	constexpr double gs = 3 * N + 1;
 	// Number of time steps
-	constexpr uint32_t M = 10000;
+	constexpr uint32_t M = 3000;
 
 	// Other lengths and simulation partitioning
 	// Length of correlation
-	constexpr uint32_t ac_length_n = 100;
+	constexpr uint32_t ac_length_n = 200;
 	// Thermalization length
-	constexpr uint32_t thermalization_n = 5000;
+	constexpr uint32_t thermalization_n = 500;
 	constexpr uint32_t Mt = M - thermalization_n;
 
 	// Problem constants
@@ -59,33 +61,32 @@ int main()
 
 	// Evolution timestep,
 	// kept it fixed but could be a function of L
-	constexpr double dt = 0.002;
-	constexpr double gs = 3 * N + 1;
+	constexpr double dt = 0.004;
 
 	// Job subdivision
 	// vary T from 0.8 to 1.3
 	std::vector<double> Ts(Ts_n);
-	// linspace(Ts, 0.8, 1.3);
-	Ts[0] = 0.9;
+	linspace(Ts, 0.8, 1.5);
+	// Ts[0] = 1.4;
 	// vary rho from 0.65 to 0.9
 	std::vector<double> rhos(rhos_n);
 	linspace(rhos, 0.6, 0.9);
 	// linspace(rhos, 0.87, 0.895);
 	// fill(rhos, 0.65);
-	// rhos[0] = 0.9;
+	// rhos[0] = 1;
 
 	// Create jobs
 	struct Job
 	{
-		const int id;
+		const uint32_t id;
 		const double T;
 		const double rho;
 	};
 	std::vector<Job> jobs;
 	jobs.reserve(jobs_n);
-	for (int i = 0; i < Ts_n; i++)
+	for (uint32_t i = 0; i < Ts_n; i++)
 	{
-		for (int j = 0; j < rhos_n; j++)
+		for (uint32_t j = 0; j < rhos_n; j++)
 		{
 			jobs.emplace_back(Job{i * rhos_n + j, Ts[i], rhos[j]});
 		}
@@ -127,8 +128,6 @@ int main()
 	};
 
 	// Open main file of output
-	// std::ofstream B_file("data/B.dat",
-	// 					 std::ofstream::out | std::ofstream::app);
 	std::ofstream B_file{"data/B.dat"};
 	B_file << "#T rho B stdB\n";
 
@@ -187,7 +186,9 @@ int main()
 		// Derivatives of job data
 		const double vstd = std::sqrt(T);
 		const double L = n * std::pow(1. / (rho / q), 1. / 3);
-		const double Ms = 5 * gs * T;
+		// const double Ms = 0.01 * gs * T;
+		// const double Ms = 0.005 * gs * T;
+		const double Ms = 1.5;
 
 #ifdef LJ_CORRECTION_OFFSET
 		const double V_offset = -V_LJ(L / 2);
@@ -206,6 +207,7 @@ int main()
 			<< "\nsigma:\t" << 1.
 			<< "\nrho:\t" << rho
 			<< "\nT:\t" << T
+			<< "\nMs:\t" << Ms
 			<< "\ndt:\t" << dt
 			<< "\nvstd:\t" << vstd
 			<< "\nV_LJ(L/2):\t" << V_LJ(L / 2)
@@ -222,12 +224,14 @@ int main()
 		double &Q = interaction.Q;
 
 		// STARTING
+		s1 = s0 = 1;
+		vs0 = vs1 = 0;
+		as1 = as0 = 0;
 
 		// Initialize positions with uniform lattice conditions
 		std::cout << "Init lattice" << std::endl;
 		init_lattice(*pos0, L, n, q);
 		apply_periodic_bounds(*pos0, L);
-		s1 = s0 = 1;
 
 		// Compute new accelerations and quantities
 		interaction.pos = &pos0;
@@ -242,29 +246,17 @@ int main()
 		interaction.pos = &pos1;
 		interaction.acc = &acc1;
 		start_interaction.acc = &acc1;
-		as1 = as0 = 0;
 
 		// Initialize velocities as gaussian on the components
 		K = 0;
 		K_half = 0;
 		std::cout << "Init velocities" << std::endl;
+		init_distribute_maxwell_boltzmann((*vel0), vstd);
 		for (uint32_t j = 0; j < N; j++)
 		{
-			init_distribute_maxwell_boltzmann((*vel0)[j], vstd);
-
 			K += (*vel0)[j].norm2();
 			K_half += ((*vel0)[j] + 0.5 * dt * (*acc0)[j]).norm2();
 		}
-		// K *= 0.5;
-		// s0 = std::sqrt((K * 2 / (3 * N)) / T);
-		// K = 0;
-		// for (uint32_t j = 0; j < N; j++)
-		// {
-		// 	// Scale velocities
-		// 	(*vel0)[j] /= s0;
-		// 	K += (*vel0)[j].norm2();
-		// }
-		// K *= 0.5;
 		K *= 0.5 / (s1 * s1);
 		K_half *= 0.5 / (s1 * s1);
 		as0 = 1.0 / (Ms * s0) * (2 * K - gs * T);
@@ -273,7 +265,6 @@ int main()
 		vs0 = 0.5 * dt * (as0 + as1);
 
 		// Quantities analysis
-		// T_ist = K * 2 / (3 * N);
 		E = K + V;
 		E += 0.5 * Ms * vs1 * vs1 + gs * T * std::log(s1);
 		Q /= N;
@@ -322,9 +313,6 @@ int main()
 				(*pos1)[j] = (*pos0)[j] +
 							 dt / (s0 * s0) * (*vel0)[j] +
 							 0.5 * dt * dt / (s0 * s0) * (*acc0)[j];
-				// (*pos1)[j] = (*pos0)[j] +
-				// 			 dt * (*vel0)[j] +
-				// 			 0.5 * dt * dt * (*acc0)[j];
 
 				// Periodic condition
 				(*pos1)[j].x -= L * std::floor((*pos1)[j].x / L);
@@ -353,15 +341,6 @@ int main()
 				K += (*vel1)[j].norm2();
 				K_half += ((*vel0)[j] + 0.5 * dt * (*acc0)[j]).norm2();
 			}
-			// K *= 0.5;
-			// s0 = std::sqrt((K * 2 / (3 * N)) / T);
-			// K = 0;
-			// for (uint32_t j = 0; j < N; j++)
-			// {
-			// 	(*vel0)[j] /= s0;
-			// 	K += (*vel0)[j].norm2();
-			// }
-			// K *= 0.5;
 			K *= 0.5 / (s1 * s1);
 			K_half *= 0.5 / (s1 * s1);
 			as1 = 1.0 / (Ms * s1) * (2 * K_half - gs * T);
@@ -372,7 +351,6 @@ int main()
 			E += 0.5 * Ms * vs1 * vs1 + gs * T * std::log(s1);
 			Q /= N;
 			Ks[i] = K;
-			// T_ist = K * 2 / (3 * N);
 			T_ist = K * 2 / gs;
 
 			// Thermalization quantities
@@ -440,32 +418,31 @@ int main()
 		double tau = 1. / par[1];
 
 #ifdef DEBUG_SAVE
-		// std::ofstream Qac_file("data/Qautocorr.dat");
-		// Qac_file << "#"
-		// 		 << " par0:" << par[0]
-		// 		 << " par1:" << par[1]
-		// 		 << " par2:" << par[2]
-		// 		 << " tau:" << tau
-		// 		 << "\n";
-		// Qac_file << "#i,t,Qac\n";
-		// for (uint32_t i = 0; i < Qac.size(); ++i)
-		// {
-		// 	Qac_file << i << ' ' << tac[i] << ' ' << Qac[i] << '\n';
-		// }
-		// Qac_file.close();
+		std::ofstream Qac_file("data/Qautocorr.dat");
+		Qac_file << "#"
+				 << " par0:" << par[0]
+				 << " par1:" << par[1]
+				 << " par2:" << par[2]
+				 << " tau:" << tau
+				 << "\n";
+		Qac_file << "#i,t,Qac\n";
+		for (uint32_t i = 0; i < Qac.size(); ++i)
+		{
+			Qac_file << i << ' ' << tac[i] << ' ' << Qac[i] << '\n';
+		}
+		Qac_file.close();
 #endif
 
 		double meanQ = mean(Qs);
 		double DmeanQ = tau / Qs.size() * variance(Qs, 1);
-		// DmeanQ *= 25; // Magic factor
 
 		std::cout
 			<< "T0: " << T
+			<< " T_mean: " << mean(Ks) * 2 / gs
 			<< " rho: " << rho
 			<< " B: " << meanQ / 48
 			<< " +/- " << std::sqrt(DmeanQ) / 48
 			<< " tau: " << tau
-			<< " Temp_mean: " << mean(Ks) * 2 / gs
 			<< std::endl;
 
 		B_file

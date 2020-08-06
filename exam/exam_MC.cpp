@@ -8,7 +8,7 @@
 #include <iostream>
 #include <vector>
 
-// #define LJ_CORRECTION_OFFSET
+#define LJ_CORRECTION_OFFSET
 // #define DEBUG_SAVE
 
 // Interaction potential
@@ -46,7 +46,7 @@ int main()
 	// Other lengths and simulation partitioning
 	// Length of correlation
 	constexpr uint32_t ac_length_n = 500;
-	constexpr uint32_t Delta_correction_n = 100;
+	constexpr uint32_t Delta_correction_n = 200;
 
 	// Problem constants
 	// constexpr double m = 1.;
@@ -60,7 +60,7 @@ int main()
 	// Ts[0] = 1.;
 	// vary rho from 0.65 to 0.9
 	std::vector<double> rhos(rhos_n);
-	linspace(rhos, 0.55, 1.);
+	linspace(rhos, 0.56, 0.9);
 	// fill(rhos, 0.65);
 
 	// Create jobs
@@ -94,7 +94,7 @@ int main()
 		double Q;
 
 		void operator()(const size_t i, const size_t j,
-						const Vec3D &alias, const double d)
+						const Vec3D &, const double d)
 		{
 			// Addup the potential
 			if (i < j)
@@ -105,7 +105,7 @@ int main()
 	};
 	struct IntSetup
 	{
-		void operator()(const size_t i)
+		void operator()(const size_t)
 		{
 		}
 	};
@@ -160,8 +160,8 @@ int main()
 		// Derivatives of job data
 		const double beta = 1. / Temp;
 		const double L = n * std::pow(1. / (rho / q), 1. / 3);
+		const double lambda = 0.05;
 		double Delta = L / n / 100;
-		double lambda = 0.05;
 
 #ifdef LJ_CORRECTION_OFFSET
 		const double V_offset = -V_LJ(L / 2);
@@ -247,6 +247,7 @@ int main()
 				(*pos1)[j].x = (*pos0)[j].x + Delta * (randu() - 0.5);
 				(*pos1)[j].y = (*pos0)[j].y + Delta * (randu() - 0.5);
 				(*pos1)[j].z = (*pos0)[j].z + Delta * (randu() - 0.5);
+
 				// Periodic condition
 				(*pos1)[j].x -= L * std::floor((*pos1)[j].x / L);
 				(*pos1)[j].y -= L * std::floor((*pos1)[j].y / L);
@@ -272,6 +273,7 @@ int main()
 			{
 				if (i % Delta_correction_n == 0)
 				{
+					// time to correct Delta
 					A_mean = mean(As);
 					if (A_mean > 0.4 && A_mean < 0.6)
 					{
@@ -346,7 +348,7 @@ int main()
 		// B autocorrelation
 		autocorrelation(Qac, Qs);
 		// Correlation factor calculation with fit
-		double par[3];
+		double par[3] = {1., 0.1, 0.};
 		fit_to_exp(par, tac, Qac);
 		// Number of dependent points
 		double tau = (1. / par[1]);

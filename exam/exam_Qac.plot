@@ -8,7 +8,7 @@ set title "Q autocorrelation"
 set xlabel "Time"
 set ylabel "Qac"
 # set log y
-set xrange [0:0.2]
+# set xrange [0:0.2]
 # set yrange [-100:400]
 l0=1
 l1=1/(7.168*0.004)

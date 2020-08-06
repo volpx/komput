@@ -8,7 +8,7 @@ set title "Temp fluctuations"
 set xlabel "Time"
 set ylabel "Temp,s,vs"
 # set log y
-# set xrange [4:4.3]
+# set xrange [0:1]
 # set yrange [-100:400]
 set grid
 plot "data/data_evolution.dat" using 2:7 with lines title "Temp"\
