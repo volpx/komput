@@ -9,31 +9,65 @@ DATA_FOLDER = "data/"
 BFILE = DATA_FOLDER+"B.dat"
 # BFILE = DATA_FOLDER+"B_MC.dat"
 # BFILE = DATA_FOLDER+"bak/B_lotsofpoints_good_thermal5000.dat"
+# BFILE = DATA_FOLDER+"bak/B_nose_final.dat"
 
 
 def main():
     # %% Get B
     Ts, rhos, B, stdB = getB(BFILE)
+    # rhos = rhos[9:-4]
+    # B = B[:, 9:-4]
+    # stdB = stdB[:, 9:-4]
 
     # %% Work on B
     # # Smooth out the curve
-    n = 5
+    n = 10
     B1 = np.empty((Ts.size, rhos.size-n+1))
     stdB1 = np.empty_like(B1)
     for i in range(Ts.size):
         rhos1, B1[i, :], stdB1[i, :] = flexible_mean_smoother(
             rhos, B[i, :], n, True)
 
-    npar = 5
-    parameters = np.empty((Ts.size, npar))
-    Dparameters = np.empty((Ts.size, npar, npar))
-    Bfit = np.empty_like(B)
-    stdBfit = np.empty_like(Bfit)
+    # npar = 4
+    # parameters = np.empty((Ts.size, npar))
+    # Dparameters = np.empty((Ts.size, npar, npar))
+    # Bfit = np.empty_like(B)
+    # stdBfit = np.empty_like(Bfit)
+    # for i in range(Ts.size):
+    #     parameters[i, :],  Dparameters[i, :, :] = curve_fit(
+    #         ffit, rhos, B[i, :], np.ones((npar,)), stdB[i, :],
+    #         method="lm", maxfev=5000)
+    #     Bfit[i, :] = ffit(rhos, *parameters[i, :])
+    #     stdBfit[i, :] = ffit_ydev(
+    #         rhos, parameters[i, :],  Dparameters[i, :, :])
+    #     print("Chi2red:", chi2red(
+    #         B[i, :], stdB[i, :], Bfit[i, :], 3), "T:", Ts[i])
+
+    # fit by pieces
+    npar = 3
+    pieces_length = 10
+    rho_length = rhos.size
+    pieces = rho_length//pieces_length
+    Bfit2 = np.empty_like(B)
+    stdBfit2 = np.empty_like(Bfit2)
+    parameters2 = np.empty((Ts.size, pieces, npar))
+    Dparameters2 = np.empty((Ts.size, pieces, npar, npar))
     for i in range(Ts.size):
-        parameters[i, :],  Dparameters[i, :] = curve_fit(
-            ffit, rhos, B[i, :], np.ones((npar,)), stdB[i, :], method="lm", maxfev=5000)
-        Bfit[i, :] = ffit(rhos, *parameters[i, :])
-        stdBfit[i, :] = ffit_ydev(rhos, parameters[i, :],  Dparameters[i, :])
+        for j in range(pieces):
+            parameters2[i, j, :],  Dparameters2[i, j, :, :] = curve_fit(
+                ffit, rhos[j*pieces_length:(j+1)*pieces_length],
+                B[i, j*pieces_length:(j+1)*pieces_length],
+                np.ones((npar,)), stdB[i, j*pieces_length:(j+1)*pieces_length],
+                method="lm", maxfev=5000)
+            Bfit2[i, j*pieces_length:(j+1) *
+                  pieces_length] = ffit(
+                      rhos[j*pieces_length:(j+1)*pieces_length],
+                      *parameters2[i, j, :])
+            stdBfit2[i, j*pieces_length:(j+1)*pieces_length] = ffit_ydev(
+                rhos[j*pieces_length:(j+1)*pieces_length],
+                parameters2[i, j, :],  Dparameters2[i, j, :, :])
+        print("Chi2red:", chi2red(
+            B[i, :], stdB[i, :], Bfit2[i, :], 3*pieces), "T:", Ts[i])
 
     figB = plt.figure()
     figB.suptitle("B")
@@ -42,16 +76,20 @@ def main():
     ax.set_ylabel("B")
     ax.grid()
     for i, T in enumerate(Ts):
-        # ax.errorbar(rhos, B[i, :],
-        #             yerr=stdB[i, :], fmt='.-',
-        #             label="T: {}".format(T))
+        ax.errorbar(rhos, B[i, :],
+                    yerr=stdB[i, :], fmt='.-',
+                    label="T: {}".format(T))
         # ax.errorbar(rhos,
-        #             ffit(rhos, *parameters[i, :]),
+        #             Bfit[i, :],
         #             yerr=stdBfit[i, :],
-        #             label="fit T:{}".format(T))
-        ax.errorbar(rhos1, B1[i, :],
-                    yerr=stdB1[i, :], fmt='.',
-                    label="T: {} smoothed".format(T))
+        #             label="T:{} fit".format(T))
+        ax.errorbar(rhos,
+                    Bfit2[i, :],
+                    yerr=stdBfit2[i, :],
+                    label="T:{} mfit".format(T))
+        # ax.errorbar(rhos1, B1[i, :],
+        #             yerr=stdB1[i, :], fmt='.',
+        #             label="T: {} smoothed".format(T))
     ax.legend()
 
     # %% Compute A
@@ -61,18 +99,28 @@ def main():
         rhods, As[i, :], stdAs[i, :] = dumb_derivative(
             rhos, B[i, :], stdB[i, :])
 
-    As_fit = np.empty_like(Bfit)
-    stdAs_fit = np.empty_like(As_fit)
-    for i in range(Ts.size):
-        As_fit[i, :] = dffit(rhos, *parameters[i, :])
-        stdAs_fit[i, :] = dffit_ydev(
-            rhos, parameters[i, :],  Dparameters[i, :])
+    # As_fit = np.empty_like(Bfit)
+    # stdAs_fit = np.empty_like(As_fit)
+    # for i in range(Ts.size):
+    #     As_fit[i, :] = dffit(rhos, *parameters[i, :])
+    #     stdAs_fit[i, :] = dffit_ydev(
+    #         rhos, parameters[i, :],  Dparameters[i, :])
 
-    As_mp = np.empty_like(Bfit)
-    stdAs_mp = np.empty_like(As_mp)
+    As_fit2 = np.empty_like(Bfit2)
+    stdAs_fit2 = np.empty_like(As_fit2)
     for i in range(Ts.size):
-        As_mp[i, :], stdAs_mp[i, :] = derivative_5points(
-            rhos, B[i, :], stdB[i, :])
+        for j in range(pieces):
+            As_fit2[i, j*pieces_length:(j+1)*pieces_length] = dffit(
+                rhos[j*pieces_length:(j+1)*pieces_length], *parameters2[i, j, :])
+            stdAs_fit2[i, j*pieces_length:(j+1)*pieces_length] = dffit_ydev(
+                rhos[j*pieces_length:(j+1)*pieces_length],
+                parameters2[i, j, :],  Dparameters2[i, j, :])
+
+    # As_mp = np.empty_like(Bfit)
+    # stdAs_mp = np.empty_like(As_mp)
+    # for i in range(Ts.size):
+    #     As_mp[i, :], stdAs_mp[i, :] = derivative_5points(
+    #         rhos, B[i, :], stdB[i, :])
 
     # # On smooothed
     As1 = np.empty((B1.shape[0], B1.shape[1]-1))
@@ -102,6 +150,11 @@ def main():
     ax.set_xlabel("rho")
     ax.set_ylabel("dB/drho")
     ax.grid()
+    # Theorical from paper
+    for i, T in enumerate(Ts_th):
+        ax.errorbar(rhos_th, As_th[i, :],
+                    fmt='.-',
+                    label="th T: {}".format(T))
     # # From original
     # for i, T in enumerate(Ts):
     #     ax.errorbar(rhods, As[i, :],
@@ -112,6 +165,11 @@ def main():
     #     ax.errorbar(rhos, As_fit[i, :],
     #                 yerr=stdAs_fit[i, :], fmt='.-',
     #                 label="fit T: {}".format(T))
+    # From fitted 2
+    for i, T in enumerate(Ts):
+        ax.errorbar(rhos, As_fit2[i, :],
+                    yerr=stdAs_fit2[i, :], fmt='.-',
+                    label="fitm T: {}".format(T))
     # # From smoothed
     # for i, T in enumerate(Ts):
     #     ax.errorbar(rhods1, As1[i, :],
@@ -129,18 +187,16 @@ def main():
     #                 yerr=stdAs_mp[i, :], fmt='.-',
     #                 label="mp T: {}".format(T))
     # From multipoint der on smoothed
-    for i, T in enumerate(Ts):
-        ax.errorbar(rhos1, As_smmp[i, :],
-                    yerr=stdAs_smmp[i, :], fmt='.-',
-                    label="smmp T: {}".format(T))
-    # Theorical from paper
-    for i, T in enumerate(Ts_th):
-        ax.errorbar(rhos_th, As_th[i, :],
-                    fmt='.-',
-                    label="th T: {}".format(T))
+    # for i, T in enumerate(Ts):
+    #     ax.errorbar(rhos1, As_smmp[i, :],
+    #                 yerr=stdAs_smmp[i, :], fmt='.-',
+    #                 label="smmp T: {}".format(T))
     ax.legend()
 
+    plt.show()
+    return
     # %% P corrections
+
     def p1(rho, T, A):
         return 2*rho**2/T*A
     p1s = np.empty_like(As_mp)
@@ -171,6 +227,10 @@ def main():
         return
 
     plt.show()
+
+
+def chi2red(data, dy, model=0, ddof=0):
+    return np.sum(((model - data)**2)/(dy**2)) / (data.size - ddof)
 
 
 def flexible_mean_smoother(datax, datay, n, datayerr=None):
@@ -255,23 +315,21 @@ def getB(filen):
     return Ts, rhos, B, stdB
 
 # # FIT FUNCTIONS poly
+# def ffit(x, a, b, c, d, e):
+#     return a+b*x+c*x**2+d*x**3+e*x**4
 
 
-def ffit(x, a, b, c, d, e):
-    return a+b*x+c*x**2+d*x**3+e*x**4
+# def Jacobian_parameters_ffit(x, a, b, c, d, e):
+#     return np.array([x**0, x, x**2, x**3, x**4]).T
 
 
-def Jacobian_parameters_ffit(x, a, b, c, d, e):
-    return np.array([x**0, x, x**2, x**3, x**4]).T
+# def dffit(x, a, b, c, d, e):
+#     return b+2*c*x+3*d*x**2+4*e*x**3
 
 
-def dffit(x, a, b, c, d, e):
-    return b+2*c*x+3*d*x**2+4*e*x**3
-
-
-def Jacobian_parameters_dffit(x, a, b, c, d, e):
-    return np.array([np.zeros_like(x), np.ones_like(x),
-                     2*x, 3*x**2, 4*x**3]).T
+# def Jacobian_parameters_dffit(x, a, b, c, d, e):
+#     return np.array([np.zeros_like(x), np.ones_like(x),
+#                      2*x, 3*x**2, 4*x**3]).T
 
 
 # FIT FUNCTIONS exp
@@ -291,6 +349,43 @@ def Jacobian_parameters_dffit(x, a, b, c, d, e):
 #     return np.array([b*np.exp(b*x),
 #                      a*np.exp(b*x)+a*b*np.exp(b*x)*x,
 #                      np.zeros_like(x)]).T
+
+# FIT FUNCTIONS 2nd degree
+def ffit(x, a, b, c):
+    return a+b*x+c*x**2
+
+
+def Jacobian_parameters_ffit(x, a, b, c):
+    return np.array([np.ones_like(x), x, x**2]).T
+
+
+def dffit(x, a, b, c):
+    return b+2*c*x
+
+
+def Jacobian_parameters_dffit(x, a, b, c):
+    return np.array([np.zeros_like(x),
+                     np.ones_like(x),
+                     2*x]).T
+
+
+# FIT FUNCTIONS 3rd degree
+# def ffit(x, a, b, c, d):
+#     return a+b*x+c*x**2+d*x**3
+
+
+# def Jacobian_parameters_ffit(x, a, b, c, d):
+#     return np.array([np.ones_like(x), x, x**2, x**3]).T
+
+
+# def dffit(x, a, b, c, d):
+#     return b+2*c*x+3*d*x**2
+
+
+# def Jacobian_parameters_dffit(x, a, b, c, d):
+#     return np.array([np.zeros_like(x),
+#                      np.ones_like(x),
+#                      2*x, 3*x**2]).T
 
 
 def dffit_ydev(x, popt, pcov):

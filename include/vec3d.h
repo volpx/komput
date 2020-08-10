@@ -52,6 +52,7 @@ public:
 	friend Vec3D &operator*(const double k, Vec3D &&a);
 
 	// Overload of the scalar product operator
+	// TODO: remove me
 	friend double operator*(const Vec3D &a, const Vec3D &b);
 
 	// Overload handy output operator

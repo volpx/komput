@@ -7,9 +7,13 @@
 #include <cmath>
 #include <iostream>
 #include <vector>
+#include <vecd.hpp>
 
 #define LJ_CORRECTION_OFFSET
 // #define DEBUG_SAVE
+#define NULL_THE_BATH() \
+	s0 = s1 = 1.;       \
+	vs1 = vs0 = as1 = as0 = 0.;
 
 // Interaction potential
 double V_LJ(double x)
@@ -44,36 +48,36 @@ int main()
 	constexpr uint32_t N = n * n * n * q;
 	// Degrees of freedom
 	constexpr double gs = 3 * N + 1;
+
+	// Simulation partitioning
 	// Number of time steps
 	constexpr uint32_t M = 3000;
-
-	// Other lengths and simulation partitioning
-	// Length of correlation
-	constexpr uint32_t ac_length_n = 200;
 	// Thermalization length
 	constexpr uint32_t thermalization_n = 500;
 	constexpr uint32_t Mt = M - thermalization_n;
+	// Length of correlation
+	constexpr uint32_t ac_length_n = 200;
+	// Steps of period for thermostat coupling
+	constexpr uint32_t s_period_coupling_n = 500;
+
+	// Evolution timestep,
+	// kept it fixed but could be a function of L
+	constexpr double dt = 0.004;
 
 	// Problem constants
 	// constexpr double m = 1.;
 	// constexpr double eps = 1.;
 	// constexpr double sigma = 1.;
 
-	// Evolution timestep,
-	// kept it fixed but could be a function of L
-	constexpr double dt = 0.004;
-
 	// Job subdivision
 	// vary T from 0.8 to 1.3
 	std::vector<double> Ts(Ts_n);
 	linspace(Ts, 0.8, 1.5);
-	// Ts[0] = 1.4;
+	// Ts[0] = 1;
 	// vary rho from 0.65 to 0.9
 	std::vector<double> rhos(rhos_n);
 	linspace(rhos, 0.6, 0.9);
-	// linspace(rhos, 0.87, 0.895);
-	// fill(rhos, 0.65);
-	// rhos[0] = 1;
+	// rhos[0] = 0.9;
 
 	// Create jobs
 	struct Job
@@ -169,6 +173,7 @@ int main()
 	// special support
 	double E, K, K_half, T_ist;
 	double s0 = 1, s1 = 1, vs0 = 0, vs1 = 0, as0 = 0, as1 = 0;
+	constexpr double ws = 2 * M_PI / (s_period_coupling_n * dt);
 
 	// job loops
 	for (const auto &job : jobs)
@@ -188,7 +193,7 @@ int main()
 		const double L = n * std::pow(1. / (rho / q), 1. / 3);
 		// const double Ms = 0.01 * gs * T;
 		// const double Ms = 0.005 * gs * T;
-		const double Ms = 1.5;
+		const double Ms = gs * T / std::pow(ws, 2);
 
 #ifdef LJ_CORRECTION_OFFSET
 		const double V_offset = -V_LJ(L / 2);
@@ -212,7 +217,7 @@ int main()
 			<< "\nvstd:\t" << vstd
 			<< "\nV_LJ(L/2):\t" << V_LJ(L / 2)
 #ifdef LJ_CORRECTION_OFFSET
-			<< "\nLJ offest enabled"
+			<< "\nLJ offset enabled"
 #endif
 			<< '\n'
 			<< std::endl;
@@ -248,25 +253,25 @@ int main()
 		start_interaction.acc = &acc1;
 
 		// Initialize velocities as gaussian on the components
-		K = 0;
-		K_half = 0;
 		std::cout << "Init velocities" << std::endl;
 		init_distribute_maxwell_boltzmann((*vel0), vstd);
+		K = 0;
+		K_half = 0;
 		for (uint32_t j = 0; j < N; j++)
 		{
 			K += (*vel0)[j].norm2();
 			K_half += ((*vel0)[j] + 0.5 * dt * (*acc0)[j]).norm2();
 		}
-		K *= 0.5 / (s1 * s1);
-		K_half *= 0.5 / (s1 * s1);
+		K *= 0.5 / (s0 * s0);
+		K_half *= 0.5 / (s0 * s0);
 		as0 = 1.0 / (Ms * s0) * (2 * K - gs * T);
-		as1 = 1.0 / (Ms * s1) * (2 * K_half - gs * T);
+		as1 = 1.0 / (Ms * s0) * (2 * K_half - gs * T);
 		vs1 = 0;
 		vs0 = 0.5 * dt * (as0 + as1);
 
 		// Quantities analysis
 		E = K + V;
-		E += 0.5 * Ms * vs1 * vs1 + gs * T * std::log(s1);
+		E += 0.5 * Ms * vs0 * vs0 + gs * T * std::log(s0);
 		Q /= N;
 		Ks[0] = K;
 		T_ist = K * 2 / gs;

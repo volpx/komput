@@ -4,14 +4,14 @@
 set term pdfcairo
 # Input file contains comma-separated values fields
 set output "data/Qac.pdf"
-set title "Q autocorrelation"
+set title "Q autocorrelation T=1 rho=0.75"
 set xlabel "Time"
 set ylabel "Qac"
 # set log y
 # set xrange [0:0.2]
 # set yrange [-100:400]
 l0=1
-l1=1/(7.168*0.004)
+l1=1/(11.589*0.004)
 l2=-0.0
 set grid
 plot "data/Qautocorr.dat" using 2:3 with lines notitle\
