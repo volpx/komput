@@ -1,13 +1,11 @@
 #include "vec3d.h"
 #include "simulation.h"
 #include "optimize.h"
-#include "uniconst.h"
 
 #include <cstdint>
 #include <cmath>
 #include <iostream>
 #include <vector>
-#include <vecd.hpp>
 
 #define LJ_CORRECTION_OFFSET
 // #define DEBUG_SAVE
@@ -33,15 +31,15 @@ double ddV_LJ(double x)
 int main()
 {
 	// Number of temps
-	constexpr uint32_t Ts_n = 10;
+	constexpr uint32_t Ts_n = 6;
 	// Number of rhos
-	constexpr uint32_t rhos_n = 50;
+	constexpr uint32_t rhos_n = 25;
 	// constexpr uint32_t Ts_n = 1;
 	// constexpr uint32_t rhos_n = 1;
 	// Number of jobs
 	constexpr uint32_t jobs_n = rhos_n * Ts_n;
 	// Number of cells on side
-	constexpr uint32_t n = 3;
+	constexpr uint32_t n = 4;
 	// Bravais lattice type
 	constexpr uint32_t q = 4;
 	// Number of particles in the box
@@ -51,14 +49,14 @@ int main()
 
 	// Simulation partitioning
 	// Number of time steps
-	constexpr uint32_t M = 3000;
+	constexpr uint32_t M = 2000;
 	// Thermalization length
 	constexpr uint32_t thermalization_n = 500;
 	constexpr uint32_t Mt = M - thermalization_n;
-	// Length of correlation
+	// Length of autocorrelation
 	constexpr uint32_t ac_length_n = 200;
 	// Steps of period for thermostat coupling
-	constexpr uint32_t s_period_coupling_n = 500;
+	constexpr uint32_t s_period_coupling_n = 50;
 
 	// Evolution timestep,
 	// kept it fixed but could be a function of L
@@ -72,12 +70,12 @@ int main()
 	// Job subdivision
 	// vary T from 0.8 to 1.3
 	std::vector<double> Ts(Ts_n);
-	linspace(Ts, 0.8, 1.5);
-	// Ts[0] = 1;
+	// linspace(Ts, 0.8, 1.3);
+	Ts[0] = 1;
 	// vary rho from 0.65 to 0.9
 	std::vector<double> rhos(rhos_n);
-	linspace(rhos, 0.6, 0.9);
-	// rhos[0] = 0.9;
+	// linspace(rhos, 0.6, 0.9);
+	rhos[0] = 0.75;
 
 	// Create jobs
 	struct Job
@@ -121,6 +119,7 @@ int main()
 			Q += ddVr(d) + dVr(d) * 2 / d;
 		}
 	};
+	// Interaction setup of one particle
 	struct IntSetup
 	{
 		std::vector<Vec3D> **acc = nullptr;
@@ -145,7 +144,7 @@ int main()
 		return i;
 	});
 
-	// In case of multi threading
+	// In case of multi-threading
 	// from here on the variables are thread specific
 
 	// Evolution status variables
@@ -168,11 +167,13 @@ int main()
 	// Wanted quantities accumulator
 	std::vector<double> Qs(Mt);
 	std::vector<double> Qac(ac_length_n);
-	std::vector<double> Ks(M);
+	std::vector<double> Ks(Mt);
 
-	// special support
+	// other support variables
 	double E, K, K_half, T_ist;
+	// Thermal bath coordinates
 	double s0 = 1, s1 = 1, vs0 = 0, vs1 = 0, as0 = 0, as1 = 0;
+	// Thermal bath oscillation angular frequency
 	constexpr double ws = 2 * M_PI / (s_period_coupling_n * dt);
 
 	// job loops
@@ -222,9 +223,11 @@ int main()
 			<< '\n'
 			<< std::endl;
 
+		// Istantiate the interaction objects
 		IntCall interaction{
 			&pos1, &acc1, V_LJ, dV_LJ, ddV_LJ, V_offset, 0, 0};
 		IntSetup start_interaction{&acc1};
+		// Getters for V and Q
 		double &V = interaction.V;
 		double &Q = interaction.Q;
 
@@ -238,16 +241,18 @@ int main()
 		init_lattice(*pos0, L, n, q);
 		apply_periodic_bounds(*pos0, L);
 
-		// Compute new accelerations and quantities
+		// Only for the start i have to act on the ***0 vectors
 		interaction.pos = &pos0;
 		interaction.acc = &acc0;
 		start_interaction.acc = &acc0;
+		// Compute new accelerations and quantities
 		V = 0;
 		Q = 0;
 		do_interactions(*pos0,
 						&interaction,
 						&start_interaction,
 						L);
+		// Restore to the correct vectors for the rest of the simulation
 		interaction.pos = &pos1;
 		interaction.acc = &acc1;
 		start_interaction.acc = &acc1;
@@ -264,25 +269,26 @@ int main()
 		}
 		K *= 0.5 / (s0 * s0);
 		K_half *= 0.5 / (s0 * s0);
+		// Apply the evolution equations for s
 		as0 = 1.0 / (Ms * s0) * (2 * K - gs * T);
 		as1 = 1.0 / (Ms * s0) * (2 * K_half - gs * T);
-		vs1 = 0;
 		vs0 = 0.5 * dt * (as0 + as1);
+		vs1 = 0;
 
 		// Quantities analysis
 		E = K + V;
 		E += 0.5 * Ms * vs0 * vs0 + gs * T * std::log(s0);
 		Q /= N;
-		Ks[0] = K;
 		T_ist = K * 2 / gs;
 
 		// Thermalizaton quantities
 		if (0 >= thermalization_n)
 		{
 			Qs[0] = Q;
+			Ks[0] = K;
 		}
 
-		// Output
+		// Output progress
 		std::cout
 			<< "First data:"
 			<< "\tE: " << E
@@ -324,6 +330,7 @@ int main()
 				(*pos1)[j].y -= L * std::floor((*pos1)[j].y / L);
 				(*pos1)[j].z -= L * std::floor((*pos1)[j].z / L);
 			}
+			// Apply the evolution equations for s
 			as0 = 1.0 / (Ms * s0) * (2 * K - gs * T);
 			s1 = s0 + dt * vs0 + 0.5 * dt * dt * as0;
 
@@ -335,7 +342,7 @@ int main()
 							&start_interaction,
 							L);
 
-			// Compute all new velocities
+			// Compute all new velocities and kinetic energy
 			K = 0;
 			K_half = 0;
 			for (uint32_t j = 0; j < N; j++)
@@ -355,13 +362,13 @@ int main()
 			E = K + V;
 			E += 0.5 * Ms * vs1 * vs1 + gs * T * std::log(s1);
 			Q /= N;
-			Ks[i] = K;
 			T_ist = K * 2 / gs;
 
 			// Thermalization quantities
 			if (i >= thermalization_n)
 			{
 				Qs[i - thermalization_n] = Q;
+				Ks[i - thermalization_n] = K;
 			}
 
 			// Print progress
@@ -407,6 +414,7 @@ int main()
 			acc1 = acc0;
 			acc0 = tmp;
 
+			// Carry over the values for s
 			s0 = s1;
 			vs0 = vs1;
 		} // End main VV loop
@@ -416,7 +424,7 @@ int main()
 
 		// B autocorrelation
 		autocorrelation(Qac, Qs);
-		// Correlation factor calculation with fit
+		// Correlation factor calculation with fit to exponential decay
 		double par[3] = {1., 0.1, 0.};
 		fit_to_exp(par, tac, Qac);
 		// Number of dependent points
@@ -438,6 +446,7 @@ int main()
 		Qac_file.close();
 #endif
 
+		// Compute the ensemble average of Q
 		double meanQ = mean(Qs);
 		double DmeanQ = tau / Qs.size() * variance(Qs, 1);
 
@@ -450,6 +459,7 @@ int main()
 			<< " tau: " << tau
 			<< std::endl;
 
+		// Save the result
 		B_file
 			<< T << ' '
 			<< rho << ' '

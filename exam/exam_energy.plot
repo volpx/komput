@@ -13,6 +13,7 @@ set ylabel "Energy"
 set grid
 plot "data/data_evolution.dat" using 2:5 with lines title "E=K+V+Nose"\
    , "data/data_evolution.dat" using 2:3 with lines title "K"\
-   , "data/data_evolution.dat" using 2:4 with lines title "V"
+   , "data/data_evolution.dat" using 2:4 with lines title "V"\
+, "data/data_evolution.dat" using 2:(column(3)+column(4)) with lines title "K+V"
 # write to file
 set output

@@ -238,6 +238,7 @@ void apply_periodic_bounds(std::vector<Vec3D> &pos, double L)
 const std::vector<Vec3D> aliaser{
 	// in order of feasability
 	Vec3D{0, 0, 0},
+
 	Vec3D{0, 0, -1},
 	Vec3D{0, 0, 1},
 	Vec3D{0, -1, 0},

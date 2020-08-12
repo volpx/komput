@@ -127,11 +127,17 @@ private:
 	std::vector<double> c_02m;
 };
 
+/*
+Compute the autocorrelation function
+x: series to computhe the autocorrelation of
+corr: resulting autocorrelation function,
+	its length is taken as the correlation length
+*/
 template <typename T>
 void autocorrelation(std::vector<T> &corr,
 					 const std::vector<T> &x)
 {
-	T m = mean(x);
+	T m{mean(x)};
 	T xim, n, d;
 
 	for (size_t t = 0; t < corr.size(); t++)
