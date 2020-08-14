@@ -137,14 +137,19 @@ template <typename T>
 void autocorrelation(std::vector<T> &corr,
 					 const std::vector<T> &x)
 {
+	// Mean of x
 	T m{mean(x)};
+	// deviation from mean, numerator, denominator
 	T xim, n, d;
 
 	for (size_t t = 0; t < corr.size(); t++)
 	{
+		// Autocorrelation at offset t
+
 		n = 0; // Numerator
 		d = 0; // Denominator
 
+		// Sum all the contributions
 		for (size_t i = 0; i < x.size() - t; i++)
 		{
 			xim = x[i] - m;
@@ -152,6 +157,7 @@ void autocorrelation(std::vector<T> &corr,
 			d += xim * xim;
 		}
 
+		// Save
 		corr[t] = n / d;
 	}
 }
