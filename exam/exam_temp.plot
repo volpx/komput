@@ -4,7 +4,7 @@
 set term pdfcairo
 # Input file contains comma-separated values fields
 set output "data/temp.pdf"
-set title "Temp fluctuations T=1 rho=0.75 Ms=33"
+set title "Temp fluctuations T=1 rho=0.75"
 set xlabel "Time"
 set ylabel "Temp,s,vs"
 # set log y

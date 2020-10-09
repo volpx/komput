@@ -31,11 +31,11 @@ double ddV_LJ(double x)
 int main()
 {
 	// Number of temps
-	constexpr uint32_t Ts_n = 6;
+	// constexpr uint32_t Ts_n = 6;
 	// Number of rhos
-	constexpr uint32_t rhos_n = 25;
-	// constexpr uint32_t Ts_n = 1;
-	// constexpr uint32_t rhos_n = 1;
+	// constexpr uint32_t rhos_n = 25;
+	constexpr uint32_t Ts_n = 1;
+	constexpr uint32_t rhos_n = 1;
 	// Number of jobs
 	constexpr uint32_t jobs_n = rhos_n * Ts_n;
 	// Number of cells on side
@@ -49,7 +49,7 @@ int main()
 
 	// Simulation partitioning
 	// Number of time steps
-	constexpr uint32_t M = 2000;
+	constexpr uint32_t M = 20000;
 	// Thermalization length
 	constexpr uint32_t thermalization_n = 500;
 	constexpr uint32_t Mt = M - thermalization_n;
@@ -118,6 +118,11 @@ int main()
 			// Compute the quantity
 			Q += ddVr(d) + dVr(d) * 2 / d;
 		}
+
+// 		void operator()(const size_t, const size_t,
+// 						const Vec3D &, const double)
+// 		{
+// 		}
 	};
 	// Interaction setup of one particle
 	struct IntSetup

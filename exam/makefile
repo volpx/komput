@@ -18,9 +18,10 @@ C           = gcc
 RM          = rm -f
 
 # Flags
-CPP_FLAGS   = -I$(INC_DIR) -O3 -std=c++14 -Wall -Wpedantic -Wextra
-C_FLAGS     = -I$(INC_DIR) -O3
-ASM_FLAGS   = -I$(INC_DIR)
+COMMON_FLAGS= -O3 -Wall -Wpedantic -Wextra -mavx2
+CPP_FLAGS   = $(COMMON_FLAGS) -I$(INC_DIR) -std=c++14
+C_FLAGS     = $(COMMON_FLAGS) -I$(INC_DIR)
+ASM_FLAGS   = $(COMMON_FLAGS) -I$(INC_DIR)
 LIBS        =  -lgsl -lgslcblas # -lboost_iostreams -lboost_system -lboost_filesystem
 L_FLAGS     = $(LIBS)
 
